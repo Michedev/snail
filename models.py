@@ -25,8 +25,8 @@ def build_embedding_network_miniimagenet():
 def build_snail(in_filters, n, t):
     log2_t = int(ceil(log2(t)))
     model = Sequential()
-    filters = in_filters
-    model.add_module('attn1', AttentionBlock(filters + n, 64, 32))  # n x t x 96
+    filters = in_filters + n
+    model.add_module('attn1', AttentionBlock(filters, 64, 32))  # n x t x 96
     filters += 32
     model.add_module('tc1', TCBlock(t, filters, 128))  # n x t x 864
     filters += 128 * log2_t

@@ -44,6 +44,7 @@ class Snail:
             print(X_embedding.shape)
             X_embedding = X_embedding.reshape(batch_size, X_embedding.size(1), self.t)
             X_embedding = torch.cat([X_embedding, y], dim=1)
+            print(X_embedding.shape)
             yhat = self.model(X_embedding)
             yhat_last = yhat[:, :, -1]
             loss_value = self.loss(yhat_last, y_last)
