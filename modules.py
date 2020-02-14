@@ -1,6 +1,6 @@
 from torch.nn import *
 import torch
-from math import log2, ceil, sqrt
+from math import log2, ceil, sqrt, floor
 
 
 class DenseBlock(Module):
@@ -11,9 +11,9 @@ class DenseBlock(Module):
         self.in_filters = in_filters
         self.out_filters = out_filters
         self.causal_conv1 = Conv1d(in_filters, out_filters, kernel_size=2,
-                                   dilation=dilation, padding=dilation)
+                                   dilation=dilation, padding=ceil(dilation/2))
         self.causal_conv2 = Conv1d(in_filters, out_filters, kernel_size=2,
-                                   dilation=dilation, padding=dilation)
+                                   dilation=dilation, padding=ceil(dilation/2))
 
     def forward(self, input):
         print('dense block')
@@ -22,6 +22,9 @@ class DenseBlock(Module):
         xf, xg = self.causal_conv1(input), self.causal_conv2(input)
         print(xf.shape)
         activations = functional.tanh(xf) * functional.sigmoid(xg)
+        if activations.shape[-1] - input.shape[-1] in [1, 2]:
+          diff = activations.shape[-1] - input.shape[-1]
+          activations = activations[:, :, :-diff]
         return torch.cat([input, activations], dim=1)
 
 
@@ -32,8 +35,7 @@ class TCBlock(Module):
         self.filters = filters
         self.seq_len = seq_len
         self.log_seq_len = int(ceil(log2(seq_len)))
-        self.blocks = [DenseBlock(2 ** i, (in_filters if i == 0 else filters), filters) for i in
-                       range(self.log_seq_len)]
+        self.blocks = [DenseBlock(2 ** i, (in_filters + i * filters), filters ) for i in range(self.log_seq_len)]
 
     def forward(self, input):
         output = input
@@ -56,6 +58,7 @@ class AttentionBlock(Module):
         self.value_layer = Linear(input_size, value_size)
 
     def forward(self, input):
+        print('attention')
         print(input.shape)
         input = input.permute(0, 2, 1)
         keys = self.key_layer(input)
