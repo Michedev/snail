@@ -9,6 +9,10 @@ from dataset import sample_batch
 from models import *
 from fire import Fire
 from random import seed as set_seed
+import os
+
+DATAFOLDER = Path(__file__).parent / 'data'
+OMNIGLOTFOLDER = DATAFOLDER / 'omniglot-py'
 
 
 class Snail:
@@ -57,13 +61,20 @@ class Snail:
                     self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
 
 
-def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13):
+def pull_data(force):
+    if force or not OMNIGLOTFOLDER.exists():
+        os.system('rm -rf data/omniglot-py/*')
+        os.system('mkdir -p data/omniglot-py')
+        os.system('unzip -q images_*.zip -d data/omniglot-py/')
+        os.system('mv data/omniglot-py/*/* data/omniglot-py')
+        os.system('rm -rf data/omniglot-py/images_*/')
+        os.system('rm images_*.zip')
+
+def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13, force_download=False):
     assert dataset in ['omniglot', 'miniimagenet']
     np.random.seed(seed)
     set_seed(seed)
-    DATAFOLDER = Path(__file__).parent / 'data'
-    # data = torchvision.datasets.Omniglot(DATAFOLDER, download=True)
-    OMNIGLOTFOLDER = DATAFOLDER / 'omniglot-py'
+    pull_data(force_download)
     classes = list(OMNIGLOTFOLDER.glob('*/*/'))
     print(len(classes))
     index_classes = np.arange(len(classes))
