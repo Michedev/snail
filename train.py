@@ -58,6 +58,7 @@ class Snail:
             if self.track_layers and episode % self.freq_track_layers == 0:
                 for i, l in enumerate(self.model.parameters(recurse=True)):
                     self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
+            print('loss episode:', loss_value)
 
     def save_weights(self, folder=''):
         torch.save(self.embedding_network.state_dict(), f'{folder}embedding_network_{self.dataset}.pth')
