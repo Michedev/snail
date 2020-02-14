@@ -1,7 +1,6 @@
 from typing import List
 
 import numpy as np
-import torchvision
 from path import Path
 from tensorboardX import SummaryWriter
 
@@ -67,12 +66,16 @@ class Snail:
 
 def pull_data(force):
     if force or not OMNIGLOTFOLDER.exists():
+        archives = ['images_background', 'images_evaluation']
+        for archive_name in archives:
+            os.system(f'wget https://github.com/brendenlake/omniglot/raw/master/python/{archive_name}.zip')
         os.system('rm -rf data/omniglot-py/*')
         os.system('mkdir -p data/omniglot-py')
-        os.system('unzip -q images_*.zip -d data/omniglot-py/')
+        for archive in archives:
+          os.system(f'unzip -q {archive}.zip -d data/omniglot-py/')
+          os.system(f'rm {archive}.zip')
         os.system('mv data/omniglot-py/*/* data/omniglot-py')
         os.system('rm -rf data/omniglot-py/images_*/')
-        os.system('rm images_*.zip')
 
 def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13,
          force_download=False, device='cuda', use_tensorboard=True, save_destination='./'):
@@ -84,6 +87,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
     set_seed(seed)
     pull_data(force_download)
     classes = list(OMNIGLOTFOLDER.glob('*/*/'))
+    print(len(classes))
     index_classes = np.arange(len(classes))
     np.random.shuffle(index_classes)
     index_train = index_classes[:trainsize]
