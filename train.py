@@ -17,7 +17,8 @@ OMNIGLOTFOLDER = DATAFOLDER / 'omniglot-py'
 
 class Snail:
 
-    def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100):
+    def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
+                 device='cuda'):
         self.t = n * k + 1
         self.n = n
         self.k = k
@@ -26,17 +27,18 @@ class Snail:
         self.is_miniimagenet = dataset == 'miniimagenet'
         self.ohe_matrix = torch.eye(n)
         if self.is_omniglot:
-            self.model = build_snail_omniglot(n, self.t)
-            self.embedding_network = build_embedding_network_omniglot()
+            self.model = build_snail_omniglot(n, self.t).to(device)
+            self.embedding_network = build_embedding_network_omniglot().to(device)
         elif self.is_miniimagenet:
-            self.model = build_snail_miniimagenet(n, self.t)
-            self.embedding_network = build_embedding_network_miniimagenet()
+            self.model = build_snail_miniimagenet(n, self.t).to(device)
+            self.embedding_network = build_embedding_network_miniimagenet().to(device)
         self.opt = torch.optim.Adam(self.model.parameters())
         self.loss = CrossEntropyLoss()
         self.track_layers = track_layers
         self.track_loss = track_loss
         self.logger = SummaryWriter('log_' + dataset) if self.track_layers or self.track_loss else None
         self.freq_track_layers = freq_track_layers
+        self.device = device
 
     def train(self, episodes: int, batch_size: int, train_classes: List):
         for episode in range(episodes):
@@ -60,6 +62,10 @@ class Snail:
                 for i, l in enumerate(self.model.parameters(recurse=True)):
                     self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
 
+    def save_weights(self):
+        torch.save(self.embedding_network.state_dict(), f'embedding_network_{self.dataset}.pth')
+        torch.save(self.model.state_dict(), f'snail_{self.dataset}.pth')
+
 
 def pull_data(force):
     if force or not OMNIGLOTFOLDER.exists():
@@ -70,10 +76,15 @@ def pull_data(force):
         os.system('rm -rf data/omniglot-py/images_*/')
         os.system('rm images_*.zip')
 
-def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13, force_download=False):
+def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13,
+         force_download=False, device='cuda', use_tensorboard=True, ):
     assert dataset in ['omniglot', 'miniimagenet']
+    assert 'cuda' in device or device == 'cpu'
+    if not torch.cuda.is_available():
+        device = 'cpu'
     np.random.seed(seed)
     set_seed(seed)
+    torch.cuda.set_rng_state(seed)
     pull_data(force_download)
     classes = list(OMNIGLOTFOLDER.glob('*/*/'))
     print(len(classes))
@@ -87,7 +98,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
     train_classes = list(train_classes)
     test_classes = list(test_classes)
     # todo add generation of new classes by rotation
-    model = Snail(n, k, dataset)
+    model = Snail(n, k, dataset, device=device)
     model.train(episodes, batch_size, train_classes)
 
 
