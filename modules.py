@@ -16,15 +16,10 @@ class DenseBlock(Module):
                                    dilation=dilation, padding=ceil(dilation/2))
 
     def forward(self, input):
-        print('dense block')
-        print(input.shape)
-        print(self.in_filters)
         xf, xg = self.causal_conv1(input), self.causal_conv2(input)
-        print(xf.shape)
         activations = functional.tanh(xf) * functional.sigmoid(xg)
-        if activations.shape[-1] - input.shape[-1] in [1, 2]:
-          diff = activations.shape[-1] - input.shape[-1]
-          activations = activations[:, :, :-diff]
+        if activations.shape[-1] == input.shape[-1] + 1:
+          activations = activations[:, :, :-1]
         return torch.cat([input, activations], dim=1)
 
 
@@ -58,8 +53,6 @@ class AttentionBlock(Module):
         self.value_layer = Linear(input_size, value_size)
 
     def forward(self, input):
-        print('attention')
-        print(input.shape)
         input = input.permute(0, 2, 1)
         keys = self.key_layer(input)
         query = self.query_layer(input)
@@ -71,11 +64,8 @@ class AttentionBlock(Module):
         probs = functional.softmax(logits / self.sqrt_key_size, dim=1)
         values = self.value_layer(input)
         read = probs.matmul(values)
-        print(input.shape)
-        print(read.shape)
         output = torch.cat([input, read], dim=-1)
         output = output.permute(0, 2, 1)
-        print(output.shape)
         return output
 
 
