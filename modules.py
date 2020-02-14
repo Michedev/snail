@@ -17,7 +17,7 @@ class DenseBlock(Module):
 
     def forward(self, input):
         xf, xg = self.causal_conv1(input), self.causal_conv2(input)
-        activations = functional.tanh(xf) * functional.sigmoid(xg)
+        activations = Tanh()(xf) * Sigmoid()(xg)
         if activations.shape[-1] == input.shape[-1] + 1:
           activations = activations[:, :, :-1]
         return torch.cat([input, activations], dim=1)
