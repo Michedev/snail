@@ -5,8 +5,8 @@ from skimage import io, transform
 
 def sample_batch(batch_size, train_classes, t, n, k, ohe_matrix=None):
     X = torch.zeros(batch_size, t, 28, 28, 1)
-    y = torch.zeros(batch_size, t, n)
-    y_last_class = torch.zeros(batch_size)
+    y = torch.zeros(batch_size, t, n, dtype=torch.int16)
+    y_last_class = torch.zeros(batch_size, dtype=torch.int16)
     if ohe_matrix is None:
       ohe_matrix = torch.eye(n)
     batch_classes = [sample(train_classes, n) for _ in range(batch_size)]
