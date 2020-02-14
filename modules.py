@@ -14,6 +14,8 @@ class DenseBlock(Module):
         self.causal_conv2 = Conv1d(in_filters, out_filters, kernel_size=2, dilation=dilation)
 
     def forward(self, input):
+        print(input.shape)
+        print(self.in_filters)
         xf, xg = self.causal_conv1(input), self.causal_conv2(input)
         activations = functional.tanh(xf) * functional.sigmoid(xg)
         return torch.cat([input, activations], dim=1)
@@ -56,11 +58,11 @@ class AttentionBlock(Module):
         mask = torch.ones(logits.shape[-1], logits.shape[-1], dtype=torch.bool)
         for i in range(logits.shape[-1]):
             mask[i, i:] = False
-        logits[:, mask] = - torch.inf
+        logits[:, mask] = - float('inf')
         probs = functional.softmax(logits / self.sqrt_key_size, dim=1)
         values = self.value_layer(input)
         read = probs.matmul(values)
-        return torch.cat([input, read], dim=1)
+        return torch.cat([input, read], dim=-1)
 
 
 class ResidualBlockImageNet(Module):
