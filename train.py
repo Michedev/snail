@@ -11,10 +11,9 @@ from fire import Fire
 from random import seed as set_seed
 
 
-
 class Snail:
 
-    def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True):
+    def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100):
         self.t = n * k + 1
         self.n = n
         self.k = k
@@ -33,8 +32,7 @@ class Snail:
         self.logger = SummaryWriter('log_' + dataset) if self.track_layers or self.track_loss else None
         self.track_layers = track_layers
         self.track_loss = track_loss
-
-
+        self.freq_track_layers = freq_track_layers
 
     def train(self, episodes: int, batch_size: int, train_classes: List):
         for episode in range(episodes):
@@ -49,6 +47,10 @@ class Snail:
             self.opt.step()
             if self.track_loss:
                 self.logger.add_scalar(f'loss_{self.dataset}_last', loss_value, episode)
+            if self.track_layers and episode % self.freq_track_layers == 0:
+                for i, l in enumerate(self.model.parameters(recurse=True)):
+                    self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
+
 
 def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13):
     assert dataset in ['omniglot', 'miniimagenet']

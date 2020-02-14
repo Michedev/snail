@@ -26,13 +26,15 @@ class TCBlock(Module):
         self.filters = filters
         self.seq_len = seq_len
         self.log_seq_len = int(ceil(log2(seq_len)))
-        self.blocks = [DenseBlock(2**i, (in_filters if i == 0 else filters), filters) for i in range(self.log_seq_len)]
+        self.blocks = [DenseBlock(2 ** i, (in_filters if i == 0 else filters), filters) for i in
+                       range(self.log_seq_len)]
 
     def forward(self, input):
         output = input
         for block in self.blocks:
             output = block(output)
         return output
+
 
 class AttentionBlock(Module):
 
@@ -60,15 +62,17 @@ class AttentionBlock(Module):
         read = probs.matmul(values)
         return torch.cat([input, read], dim=1)
 
+
 class ResidualBlockImageNet(Module):
 
     def __init__(self, in_filters: int, out_filters: int, num_convs: int = 3):
         super(ResidualBlockImageNet, self).__init__()
         self.layers = Sequential()
         for i in range(num_convs):
-            block = Sequential(Conv2d(in_filters if i == 0 else out_filters, out_filters, kernel_size=3, padding='same'),
-                               BatchNorm2d(out_filters),
-                               LeakyReLU(0.1))
+            block = Sequential(
+                Conv2d(in_filters if i == 0 else out_filters, out_filters, kernel_size=3, padding='same'),
+                BatchNorm2d(out_filters),
+                LeakyReLU(0.1))
             self.layers.add_module(f'residual_block_{i}', block)
         self.layers = Sequential(*self.layers)
         self.conv1x1 = Conv2d(in_filters, out_filters, kernel_size=1)
@@ -88,11 +92,12 @@ class ResidualBlockImageNet(Module):
 
 def ConvBlockOmniglot(in_filters: int, out_filters: int):
     return Sequential(
-            Conv2d(in_filters, out_filters, kernel_size=3, padding=1),
-            BatchNorm2d(out_filters),
-            ReLU(),
-            MaxPool2d(2)
-        )
+        Conv2d(in_filters, out_filters, kernel_size=3, padding=1),
+        BatchNorm2d(out_filters),
+        ReLU(),
+        MaxPool2d(2)
+    )
+
 
 class Flatten(Module):
     def forward(self, input):
