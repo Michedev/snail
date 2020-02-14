@@ -53,8 +53,9 @@ class Snail:
             loss_value = self.loss(yhat_last, y_last)
             loss_value.backward()
             self.opt.step()
+            loss_value = float(loss_value)
             if self.track_loss:
-                self.logger.add_scalar(f'loss_{self.dataset}_last', loss_value, episode)
+                self.logger.add_scalar(f'loss_{self.dataset}_last', loss_value, globa_step=episode)
             if self.track_layers and episode % self.freq_track_layers == 0:
                 for i, l in enumerate(self.model.parameters(recurse=True)):
                     self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
@@ -80,6 +81,22 @@ def pull_data(force):
 
 def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13,
          force_download=False, device='cuda', use_tensorboard=True, save_destination='./'):
+    """
+    Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
+    When training is successfully finished, the embedding network weights and snail weights are saved
+    and the path of classes used for training/test in train_classes.txt/test_classes.txt
+    :param dataset: Dataset used for training,  can be only {'omniglot', 'miniimagenet'}
+    :param n: the N in N-way in meta-learning i.e. number of class sampled in each row of the dataset
+    :param k: the K in K-shot in meta-learning i.e. number of observations for each class
+    :param trainsize: number of class used in training
+    :param episodes: time of model updates
+    :param batch_size: size of a training batch
+    :param seed: seed for reproducibility
+    :param force_download: :bool redownload data even if folder is present
+    :param device: : device used in pytorch for training, can be "cuda*" or "cpu"
+    :param use_tensorboard: :bool save metrics in tensorboard
+    :param save_destination: :string location of model weights
+    """
     assert dataset in ['omniglot', 'miniimagenet']
     assert 'cuda' in device or device == 'cpu'
     if not torch.cuda.is_available():
@@ -98,13 +115,14 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
 
     train_classes = list(train_classes)
     test_classes = list(test_classes)
+    model = Snail(n, k, dataset, device=device, track_loss=use_tensorboard, track_layers=use_tensorboard)
+    model.train(episodes, batch_size, train_classes)
+    model.save_weights(save_destination)
     with open('train_classes.txt', 'w') as f:
         f.write(', '.join(train_classes))
     with open('test_classes.txt', 'w') as f:
         f.write(', '.join(test_classes))
-    model = Snail(n, k, dataset, device=device, track_loss=use_tensorboard, track_layers=use_tensorboard)
-    model.train(episodes, batch_size, train_classes)
-    model.save_weights(save_destination)
+
 
 
 if __name__ == '__main__':
