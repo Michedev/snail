@@ -7,14 +7,13 @@ You can train the model via train.py
 
 the script accepts many input arguments which are
 
-    NAME
-        train.py - Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner). When training is successfully finished, the embedding network weights and snail weights are saved and the path of classes used for training/test in train_classes.txt/test_classes.txt
-
     SYNOPSIS
         train.py <flags>
 
     DESCRIPTION
-        Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner). When training is successfully finished, the embedding network weights and snail weights are saved and the path of classes used for training/test in train_classes.txt/test_classes.txt
+        Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
+        When training is successfully finished, the embedding network weights and snail weights are saved
+         and the path of classes used for training/test in train_classes.txt/test_classes.txt
 
     FLAGS
         --dataset=DATASET
