@@ -62,9 +62,9 @@ class Snail:
                 for i, l in enumerate(self.model.parameters(recurse=True)):
                     self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
 
-    def save_weights(self):
-        torch.save(self.embedding_network.state_dict(), f'embedding_network_{self.dataset}.pth')
-        torch.save(self.model.state_dict(), f'snail_{self.dataset}.pth')
+    def save_weights(self, folder=''):
+        torch.save(self.embedding_network.state_dict(), f'{folder}embedding_network_{self.dataset}.pth')
+        torch.save(self.model.state_dict(), f'{folder}snail_{self.dataset}.pth')
 
 
 def pull_data(force):
@@ -77,7 +77,7 @@ def pull_data(force):
         os.system('rm images_*.zip')
 
 def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13,
-         force_download=False, device='cuda', use_tensorboard=True, ):
+         force_download=False, device='cuda', use_tensorboard=True, save_destination='./'):
     assert dataset in ['omniglot', 'miniimagenet']
     assert 'cuda' in device or device == 'cpu'
     if not torch.cuda.is_available():
@@ -98,8 +98,9 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
     train_classes = list(train_classes)
     test_classes = list(test_classes)
     # todo add generation of new classes by rotation
-    model = Snail(n, k, dataset, device=device)
+    model = Snail(n, k, dataset, device=device, track_loss=use_tensorboard, track_layers=use_tensorboard)
     model.train(episodes, batch_size, train_classes)
+    model.save_weights(save_destination)
 
 
 if __name__ == '__main__':
