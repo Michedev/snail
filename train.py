@@ -55,7 +55,7 @@ class Snail:
             self.opt.step()
             loss_value = float(loss_value)
             if self.track_loss:
-                self.logger.add_scalar(f'loss_{self.dataset}_last', loss_value, globa_step=episode)
+                self.logger.add_scalar(f'loss_{self.dataset}_last', loss_value, global_step=episode)
             if self.track_layers and episode % self.freq_track_layers == 0:
                 for i, l in enumerate(self.model.parameters(recurse=True)):
                     self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
