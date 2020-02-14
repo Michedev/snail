@@ -47,10 +47,8 @@ class Snail:
             self.opt.zero_grad()
             X = X.reshape(X.size(0) * X.size(1), X.size(4), X.size(2), X.size(3), )
             X_embedding = self.embedding_network(X)
-            print(X_embedding.shape)
             X_embedding = X_embedding.reshape(batch_size, X_embedding.size(1), self.t)
             X_embedding = torch.cat([X_embedding, y], dim=1)
-            print(X_embedding.shape)
             yhat = self.model(X_embedding)
             yhat_last = yhat[:, :, -1]
             loss_value = self.loss(yhat_last, y_last)
@@ -84,10 +82,8 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
         device = 'cpu'
     np.random.seed(seed)
     set_seed(seed)
-    torch.cuda.set_rng_state(seed)
     pull_data(force_download)
     classes = list(OMNIGLOTFOLDER.glob('*/*/'))
-    print(len(classes))
     index_classes = np.arange(len(classes))
     np.random.shuffle(index_classes)
     index_train = index_classes[:trainsize]
@@ -97,7 +93,10 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
 
     train_classes = list(train_classes)
     test_classes = list(test_classes)
-    # todo add generation of new classes by rotation
+    with open('train_classes.txt', 'w') as f:
+        f.write(', '.join(train_classes))
+    with open('test_classes.txt', 'w') as f:
+        f.write(', '.join(test_classes))
     model = Snail(n, k, dataset, device=device, track_loss=use_tensorboard, track_layers=use_tensorboard)
     model.train(episodes, batch_size, train_classes)
     model.save_weights(save_destination)
