@@ -9,6 +9,8 @@ from models import *
 from fire import Fire
 from random import seed as set_seed
 import os
+import zipfile
+import wget
 
 DATAFOLDER = Path(__file__).parent / 'data'
 OMNIGLOTFOLDER = DATAFOLDER / 'omniglot-py'
@@ -66,18 +68,22 @@ class Snail:
         torch.save(self.model.state_dict(), f'{folder}snail_{self.dataset}.pth')
 
 
-def pull_data(force):
+def pull_data_omniglot(force):
     if force or not OMNIGLOTFOLDER.exists():
         archives = ['images_background', 'images_evaluation']
         for archive_name in archives:
-            os.system(f'wget https://github.com/brendenlake/omniglot/raw/master/python/{archive_name}.zip')
-        os.system('rm -rf data/omniglot-py/*')
-        os.system('mkdir -p data/omniglot-py')
+            wget.download(f'https://github.com/brendenlake/omniglot/raw/master/python/{archive_name}.zip')
+        if OMNIGLOTFOLDER.exists():
+            for el in OMNIGLOTFOLDER.files(): el.remove()
+        OMNIGLOTFOLDER.makedirs_p()
         for archive in archives:
-          os.system(f'unzip -q {archive}.zip -d data/omniglot-py/')
-          os.system(f'rm {archive}.zip')
-        os.system('mv data/omniglot-py/*/* data/omniglot-py')
-        os.system('rm -rf data/omniglot-py/images_*/')
+            with zipfile.ZipFile(f'{archive}.zip') as z:
+                z.extractall(OMNIGLOTFOLDER)
+            Path(f'{archive}.zip').remove()
+        for folder in OMNIGLOTFOLDER.glob('/*/*'):
+            folder.move(OMNIGLOTFOLDER)
+        for folder in OMNIGLOTFOLDER.dirs('images_*'):
+            folder.removedirs()
 
 def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13,
          force_download=False, device='cuda', use_tensorboard=True, save_destination='./'):
@@ -89,7 +95,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
     :param n: the N in N-way in meta-learning i.e. number of class sampled in each row of the dataset (default 5)
     :param k: the K in K-shot in meta-learning i.e. number of observations for each class (default 5)
     :param trainsize: number of class used in training (default 1200)
-    :param episodes: time of model updates (default 5 000)
+    :param episodes: time of model updates (default 5000)
     :param batch_size: size of a training batch (default 32)
     :param seed: seed for reproducibility (default 13)
     :param force_download: :bool redownload data even if folder is present (default True)
@@ -103,7 +109,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
         device = 'cpu'
     np.random.seed(seed)
     set_seed(seed)
-    pull_data(force_download)
+    pull_data_omniglot(force_download)
     classes = list(OMNIGLOTFOLDER.glob('*/*/'))
     print(len(classes))
     index_classes = np.arange(len(classes))
