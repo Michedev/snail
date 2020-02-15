@@ -1,7 +1,6 @@
 from typing import List
 
 import numpy as np
-from path import Path
 from tensorboardX import SummaryWriter
 
 from dataset import sample_batch, get_train_test_classes, pull_data_omniglot
@@ -9,9 +8,7 @@ from models import *
 from fire import Fire
 from random import seed as set_seed
 
-ROOT = Path(__file__).parent
-DATAFOLDER = ROOT / 'data'
-OMNIGLOTFOLDER = DATAFOLDER / 'omniglot-py'
+from paths import ROOT, OMNIGLOTFOLDER
 
 
 class Snail:

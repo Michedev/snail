@@ -4,12 +4,11 @@ import numpy as np
 import torch
 from random import sample, randint
 
-from os.path import Path
-
+from path import Path
 import wget
 from skimage import io, transform
 
-from train import OMNIGLOTFOLDER
+from paths import OMNIGLOTFOLDER
 
 
 def sample_batch(batch_size, train_classes, t, n, k, ohe_matrix=None):
