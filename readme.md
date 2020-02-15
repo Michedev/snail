@@ -34,4 +34,4 @@ the script accepts many input arguments which are
         --use_tensorboard=USE_TENSORBOARD
             :bool save metrics in tensorboard (default True)
         --save_destination=SAVE_DESTINATION
-            :string location of model weights (default './')
+            :string location of model weights (default 'model_weights')

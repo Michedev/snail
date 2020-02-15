@@ -46,3 +46,18 @@ def build_snail_omniglot(n, t):
 
 def build_snail_miniimagenet(n, t):
     return build_snail(384, n, t)
+
+
+def predict(embedding_network, snail, X, y):
+    batch_size, t = X.shape[0], X.shape[1]
+    y = y.permute(0, 2, 1)
+    X = X.reshape(X.size(0) * X.size(1), X.size(4), X.size(2), X.size(3))
+    X_embedding = embedding_network(X)
+    X_embedding = X_embedding.reshape(batch_size, X_embedding.size(1), t)
+    X_embedding = torch.cat([X_embedding, y], dim=1)
+    yhat = snail(X_embedding)
+    return yhat
+
+
+__all__ = ['build_snail_miniimagenet', 'build_embedding_network_miniimagenet',
+           'build_snail_omniglot', 'build_embedding_network_omniglot', 'build_snail', 'predict']

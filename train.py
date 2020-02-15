@@ -42,16 +42,10 @@ class Snail:
     def train(self, episodes: int, batch_size: int, train_classes: List):
         for episode in range(episodes):
             X, y, y_last = sample_batch(batch_size, train_classes, self.t, self.n, self.k, self.ohe_matrix)
-            y = y.permute(0, 2, 1)
-            self.opt.zero_grad()
-            X = X.reshape(X.size(0) * X.size(1), X.size(4), X.size(2), X.size(3))
             X = X.to(self.device)
             y = y.to(self.device)
             y_last = y_last.to(self.device)
-            X_embedding = self.embedding_network(X)
-            X_embedding = X_embedding.reshape(batch_size, X_embedding.size(1), self.t)
-            X_embedding = torch.cat([X_embedding, y], dim=1)
-            yhat = self.model(X_embedding)
+            yhat = self.predict(X, y)
             yhat_last = yhat[:, :, -1]
             loss_value = self.loss(yhat_last, y_last)
             loss_value.backward()
@@ -62,7 +56,18 @@ class Snail:
             if self.track_layers and episode % self.freq_track_layers == 0:
                 for i, l in enumerate(self.model.parameters(recurse=True)):
                     self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
-            print('loss episode:', loss_value)
+            print(f'loss episode {episode}:', loss_value)
+
+    def predict(self, X, y):
+        batch_size = X.shape[0]
+        y = y.permute(0, 2, 1)
+        self.opt.zero_grad()
+        X = X.reshape(X.size(0) * X.size(1), X.size(4), X.size(2), X.size(3))
+        X_embedding = self.embedding_network(X)
+        X_embedding = X_embedding.reshape(batch_size, X_embedding.size(1), self.t)
+        X_embedding = torch.cat([X_embedding, y], dim=1)
+        yhat = self.model(X_embedding)
+        return yhat
 
     def save_weights(self, folder=''):
         torch.save(self.embedding_network.state_dict(), f'{folder}embedding_network_{self.dataset}.pth')
