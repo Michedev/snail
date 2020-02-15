@@ -1,6 +1,15 @@
+import zipfile
+
+import numpy as np
 import torch
 from random import sample, randint
+
+from os.path import Path
+
+import wget
 from skimage import io, transform
+
+from train import OMNIGLOTFOLDER
 
 
 def sample_batch(batch_size, train_classes, t, n, k, ohe_matrix=None):
@@ -36,3 +45,43 @@ def load_and_transform(name_image):
     img = io.imread(name_image, as_gray=True)
     img = transform.resize(img, (28, 28))
     return img
+
+
+def get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize):
+    if not train_classes_file.exists() or test_classes_file.exists():
+        index_classes = np.arange(len(classes))
+        np.random.shuffle(index_classes)
+        index_train = index_classes[:trainsize]
+        index_test = index_classes[trainsize:]
+        train_classes = [classes[i_train] for i_train in index_train]
+        test_classes = [classes[i_test] for i_test in index_test]
+    else:
+
+        with open(train_classes_file) as f:
+            train_classes = f.read()
+        train_classes = train_classes.split(', ')
+        train_classes = list(map(Path, train_classes))
+
+        with open(test_classes_file) as f:
+            test_classes = f.read()
+        test_classes = test_classes.split(', ')
+        test_classes = list(map(Path, test_classes))
+    return train_classes, test_classes
+
+
+def pull_data_omniglot(force):
+    if force or not OMNIGLOTFOLDER.exists():
+        archives = ['images_background', 'images_evaluation']
+        for archive_name in archives:
+            wget.download(f'https://github.com/brendenlake/omniglot/raw/master/python/{archive_name}.zip')
+        if OMNIGLOTFOLDER.exists():
+            for el in OMNIGLOTFOLDER.files(): el.remove()
+        OMNIGLOTFOLDER.makedirs_p()
+        for archive in archives:
+            with zipfile.ZipFile(f'{archive}.zip') as z:
+                z.extractall(OMNIGLOTFOLDER)
+            Path(f'{archive}.zip').remove()
+        for folder in OMNIGLOTFOLDER.glob('/*/*'):
+            folder.move(OMNIGLOTFOLDER)
+        for folder in OMNIGLOTFOLDER.dirs('images_*'):
+            folder.removedirs()

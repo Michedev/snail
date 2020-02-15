@@ -4,15 +4,13 @@ import numpy as np
 from path import Path
 from tensorboardX import SummaryWriter
 
-from dataset import sample_batch
+from dataset import sample_batch, get_train_test_classes, pull_data_omniglot
 from models import *
 from fire import Fire
 from random import seed as set_seed
-import os
-import zipfile
-import wget
 
-DATAFOLDER = Path(__file__).parent / 'data'
+ROOT = Path(__file__).parent
+DATAFOLDER = ROOT / 'data'
 OMNIGLOTFOLDER = DATAFOLDER / 'omniglot-py'
 
 
@@ -71,23 +69,6 @@ class Snail:
         torch.save(self.model.state_dict(), f'{folder}snail_{self.dataset}.pth')
 
 
-def pull_data_omniglot(force):
-    if force or not OMNIGLOTFOLDER.exists():
-        archives = ['images_background', 'images_evaluation']
-        for archive_name in archives:
-            wget.download(f'https://github.com/brendenlake/omniglot/raw/master/python/{archive_name}.zip')
-        if OMNIGLOTFOLDER.exists():
-            for el in OMNIGLOTFOLDER.files(): el.remove()
-        OMNIGLOTFOLDER.makedirs_p()
-        for archive in archives:
-            with zipfile.ZipFile(f'{archive}.zip') as z:
-                z.extractall(OMNIGLOTFOLDER)
-            Path(f'{archive}.zip').remove()
-        for folder in OMNIGLOTFOLDER.glob('/*/*'):
-            folder.move(OMNIGLOTFOLDER)
-        for folder in OMNIGLOTFOLDER.dirs('images_*'):
-            folder.removedirs()
-
 def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13,
          force_download=False, device='cuda', use_tensorboard=True, save_destination='./'):
     """
@@ -115,15 +96,11 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
     pull_data_omniglot(force_download)
     classes = list(OMNIGLOTFOLDER.glob('*/*/'))
     print(len(classes))
-    index_classes = np.arange(len(classes))
-    np.random.shuffle(index_classes)
-    index_train = index_classes[:trainsize]
-    index_test = index_classes[trainsize:]
-    train_classes = [classes[i_train] for i_train in index_train]
-    test_classes = [classes[i_test] for i_test in index_test]
+    train_classes_file = ROOT / 'train_classes.txt'
+    test_classes_file = ROOT / 'test_classes'
+    train_classes, test_classes = get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize)
 
-    train_classes = list(train_classes)
-    test_classes = list(test_classes)
+
     model = Snail(n, k, dataset, device=device, track_loss=use_tensorboard, track_layers=use_tensorboard)
     model.train(episodes, batch_size, train_classes)
     model.save_weights(save_destination)
@@ -131,7 +108,6 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
         f.write(', '.join(train_classes))
     with open('test_classes.txt', 'w') as f:
         f.write(', '.join(test_classes))
-
 
 
 if __name__ == '__main__':
