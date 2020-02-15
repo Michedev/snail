@@ -1,6 +1,6 @@
 from path import Path
 from models import *
-from dataset import sample_batch
+from dataset import sample_batch, pull_data_omniglot
 from fire import Fire
 import torch
 
@@ -12,6 +12,7 @@ def main(dataset='omniglot',
          test_classes_path='test_classes.txt',
          device='cpu', n_sample=500):
     assert dataset in ['omniglot', 'miniimagenet']
+    pull_data_omniglot(force=False)
     t = n * k + 1
     if dataset == 'omniglot':
         embedding_network = build_embedding_network_omniglot().to(device)
@@ -32,9 +33,17 @@ def main(dataset='omniglot',
         p_yhat_last: torch.Tensor = yhat[:, :, -1]
         loss_value = loss(p_yhat_last, y_last)
         yhat_last = p_yhat_last.argmax(1)
-        acc = (yhat_last == y_last).mean()
+        acc = (yhat_last == y_last).float().mean()
         loss_values[i] = loss_value
         acc_values[i] = acc
+    print('\n', '='*100, '\n', sep='', end='')
+    print('loss values:', loss_values)
+    print('avg loss:', loss_values.mean())
+    print('\n', '='*100, '\n', sep='', end='')
+    print('acc values:', acc_values)
+    print('avg acc:', acc_values.mean())
+    print('\n', '='*100, '\n', sep='', end='')
+
 
 if __name__ == '__main__':
     Fire(main)

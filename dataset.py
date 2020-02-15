@@ -80,7 +80,8 @@ def pull_data_omniglot(force):
             with zipfile.ZipFile(f'{archive}.zip') as z:
                 z.extractall(OMNIGLOTFOLDER)
             Path(f'{archive}.zip').remove()
-        for folder in OMNIGLOTFOLDER.glob('/*/*'):
-            folder.move(OMNIGLOTFOLDER)
+        for idiom_folder in OMNIGLOTFOLDER.dirs():
+            for char_folder in idiom_folder.dirs():
+                char_folder.move(OMNIGLOTFOLDER)
         for folder in OMNIGLOTFOLDER.dirs('images_*'):
             folder.removedirs()
