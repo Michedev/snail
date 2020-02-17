@@ -16,7 +16,7 @@ from paths import ROOT, OMNIGLOTFOLDER
 class Snail:
 
     def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
-                 device='cuda', device_save='cpu', test_loss_freq=10):
+                 device='cuda', device_save='cpu', test_loss_freq=10, random_rotation=True):
         self.t = n * k + 1
         self.n = n
         self.k = k
@@ -41,15 +41,16 @@ class Snail:
         self.freq_track_layers = freq_track_layers
         self.device_save = torch.device(device_save)
         self.test_loss_freq = test_loss_freq
+        self.random_rotation = random_rotation
 
 
     def train(self, episodes: int, batch_size: int, train_classes, test_classes=None):
         self.embedding_network.train()
         self.model.train()
-        train_data = RandomBatchSampler(train_classes, batch_size, self.n, self.k, episodes)
+        train_data = RandomBatchSampler(train_classes, batch_size, self.n, self.k, episodes, self.random_rotation)
         data_loader = torch.utils.data.DataLoader(train_data, shuffle=False, num_workers=4)
         if test_classes:
-            test_data = RandomBatchSampler(test_classes, batch_size, self.n, self.k, episodes)
+            test_data = RandomBatchSampler(test_classes, batch_size, self.n, self.k, episodes, self.random_rotation)
         episode = 0
         for X, y, y_last in data_loader:
             loss_value = self.calc_loss(X, y, y_last)
@@ -66,7 +67,8 @@ class Snail:
             if self.track_layers and episode % self.freq_track_layers == 0:
                 for i, l in enumerate(self.model.parameters(recurse=True)):
                     self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
-            print(f'loss episode {episode}:', loss_value)
+            if episode % 100:
+                print(f'loss episode {episode}:', loss_value)
             episode += 1
 
     def calc_loss(self, X, y, y_last):
@@ -100,9 +102,9 @@ class Snail:
         torch.save(self.model.to(self.device_save).state_dict(), f'{folder}snail_{self.dataset}.pth')
 
 
-def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13,
-         force_download=False, device='cuda', device_save='cpu', use_tensorboard=True, save_destination='model_weights/',
-         eval_test=True, test_loss_freq=10):
+def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, random_rotation=True,
+         seed=13, force_download=False, device='cuda', device_save='cpu', use_tensorboard=True,
+         save_destination='model_weights/', eval_test=True, test_loss_freq=10):
     """
     Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
     When training is successfully finished, the embedding network weights and snail weights are saved, as well
@@ -136,7 +138,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
 
 
     model = Snail(n, k, dataset, device=device, device_save=device_save, track_loss=use_tensorboard, track_layers=use_tensorboard,
-                  test_loss_freq=test_loss_freq)
+                  test_loss_freq=test_loss_freq, random_rotation=random_rotation)
     model.train(episodes, batch_size, train_classes, None if not eval_test else test_classes)
     model.save_weights(save_destination)
     with open('train_classes.txt', 'w') as f:

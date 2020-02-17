@@ -45,7 +45,7 @@ def sample_batch(batch_size, train_classes, t, n, k, random_rotation=True, ohe_m
 
 class RandomBatchSampler(torch.utils.data.Dataset):
 
-    def __init__(self, class_pool, batch_size, n, k, episodes):
+    def __init__(self, class_pool, batch_size, n, k, episodes, random_rotation):
         self.class_pool = class_pool
         self.batch_size = batch_size
         self.n = n
@@ -53,6 +53,7 @@ class RandomBatchSampler(torch.utils.data.Dataset):
         self.t = n * k + 1
         self.ohe = torch.eye(n)
         self.episodes = episodes
+        self.random_rotation = random_rotation
 
     def __len__(self):
         return self.episodes
