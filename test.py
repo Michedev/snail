@@ -21,16 +21,23 @@ def main(dataset='omniglot',
     else:
         embedding_network = build_embedding_network_miniimagenet().to(device)
         snail = build_snail_miniimagenet(n, t).to(device)
-    embedding_network.load_state_dict(torch.load(embedding_path))
-    snail.load_state_dict(torch.load(model_path))
+    # embedding_network.load_state_dict(torch.load(embedding_path))
+    #todo fix import of snail weights
+    # snail.load_state_dict(torch.load(model_path))
+    embedding_network = embedding_network.eval()
+    snail = snail.eval()
+    embedding_network.requires_grad_(False)
+    snail.requires_grad_(False)
+
     with open(test_classes_path) as f:
         test_classes = f.read()
     test_classes = list(map(Path, test_classes.split(', ')))
     loss = torch.nn.CrossEntropyLoss()
     loss_values = torch.zeros(n_sample)
     acc_values = torch.zeros(n_sample)
+    ohe_matrix = torch.eye(n)
     for i in range(n_sample):
-        X, y, y_last = sample_batch(batch_size, test_classes, t, n, k)
+        X, y, y_last = sample_batch(batch_size, test_classes, t, n, k, ohe_matrix)
         yhat = predict(embedding_network, snail, X, y)
         p_yhat_last: torch.Tensor = yhat[:, :, -1]
         loss_value = loss(p_yhat_last, y_last)
@@ -49,4 +56,4 @@ def main(dataset='omniglot',
 
 
 if __name__ == '__main__':
-    Fire(main)
+    main()

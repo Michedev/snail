@@ -7,6 +7,8 @@ from dataset import sample_batch, get_train_test_classes, pull_data_omniglot
 from models import *
 from fire import Fire
 from random import seed as set_seed
+import torch
+from torch.nn import *
 
 from paths import ROOT, OMNIGLOTFOLDER
 
@@ -37,6 +39,8 @@ class Snail:
         self.device = device
 
     def train(self, episodes: int, batch_size: int, train_classes: List):
+        self.embedding_network.train()
+        self.model.train()
         for episode in range(episodes):
             X, y, y_last = sample_batch(batch_size, train_classes, self.t, self.n, self.k, self.ohe_matrix)
             X = X.to(self.device)
@@ -67,6 +71,8 @@ class Snail:
         return yhat
 
     def save_weights(self, folder=''):
+        self.embedding_network.eval()
+        self.model.eval()
         torch.save(self.embedding_network.state_dict(), f'{folder}embedding_network_{self.dataset}.pth')
         torch.save(self.model.state_dict(), f'{folder}snail_{self.dataset}.pth')
 
@@ -99,7 +105,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
     classes = list(OMNIGLOTFOLDER.glob('*/*/'))
     print(len(classes))
     train_classes_file = ROOT / 'train_classes.txt'
-    test_classes_file = ROOT / 'test_classes'
+    test_classes_file = ROOT / 'test_classes.txt'
     train_classes, test_classes = get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize)
 
 
