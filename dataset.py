@@ -10,7 +10,6 @@ from skimage import io, transform
 
 from paths import OMNIGLOTFOLDER
 
-
 def sample_batch(batch_size, train_classes, t, n, k, ohe_matrix=None):
     X = torch.zeros(batch_size, t, 28, 28, 1)
     y = torch.zeros(batch_size, t, n)
@@ -38,6 +37,24 @@ def sample_batch(batch_size, train_classes, t, n, k, ohe_matrix=None):
         X[i_batch, -1] = torch.from_numpy(last_img).unsqueeze(dim=-1)
         y_last_class[i_batch] = i_last_class
     return X, y, y_last_class
+
+
+class RandomBatchSampler(torch.utils.data.Dataset):
+
+    def __init__(self, class_pool, batch_size, n, k, episodes):
+        self.class_pool = class_pool
+        self.batch_size = batch_size
+        self.n = n
+        self.k = k
+        self.t = n * k + 1
+        self.ohe = torch.eye(n)
+        self.episodes = episodes
+
+    def __len__(self):
+        return self.episodes
+
+    def __getitem__(self, i):
+        return sample_batch(self.batch_size, self.class_pool, self.t, self.n, self.k, self.ohe)
 
 
 def load_and_transform(name_image):

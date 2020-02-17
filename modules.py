@@ -23,21 +23,13 @@ class DenseBlock(Module):
         return torch.cat([input, activations], dim=1)
 
 
-class TCBlock(Module):
-
-    def __init__(self, seq_len: int, in_filters: int, filters: int):
-        super().__init__()
-        self.filters = filters
-        self.seq_len = seq_len
-        self.log_seq_len = int(ceil(log2(seq_len)))
-        self.blocks = [DenseBlock(2 ** i, (in_filters + i * filters), filters ) for i in range(self.log_seq_len)]
-
-    def forward(self, input):
-        output = input
-        for block in self.blocks:
-            output = block(output)
-        return output
-
+def TCBlock(seq_len: int, in_filters: int, filters: int):
+    log_seq_len = int(ceil(log2(seq_len)))
+    model = Sequential()
+    for i in range(log_seq_len):
+        block = DenseBlock(2 ** i, (in_filters + i * filters), filters)
+        model.add_module(f'dense_{i+1}', block)
+    return model
 
 class AttentionBlock(Module):
 

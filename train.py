@@ -3,8 +3,8 @@ from typing import List
 import numpy as np
 from tensorboardX import SummaryWriter
 
-from dataset import sample_batch, get_train_test_classes, pull_data_omniglot
-from models import *
+from dataset import RandomBatchSampler, get_train_test_classes, pull_data_omniglot
+from models import build_embedding_network_miniimagenet, build_embedding_network_omniglot, build_snail_miniimagenet, build_snail_omniglot
 from fire import Fire
 from random import seed as set_seed
 import torch
@@ -20,33 +20,38 @@ class Snail:
         self.t = n * k + 1
         self.n = n
         self.k = k
+        self.device = torch.device(device)
         self.dataset = dataset
         self.is_omniglot = dataset == 'omniglot'
         self.is_miniimagenet = dataset == 'miniimagenet'
         self.ohe_matrix = torch.eye(n)
         if self.is_omniglot:
-            self.model = build_snail_omniglot(n, self.t).to(device)
-            self.embedding_network = build_embedding_network_omniglot().to(device)
+            self.embedding_network = build_embedding_network_omniglot()
+            self.model = build_snail_omniglot(n, self.t)
         elif self.is_miniimagenet:
-            self.model = build_snail_miniimagenet(n, self.t).to(device)
-            self.embedding_network = build_embedding_network_miniimagenet().to(device)
+            self.model = build_snail_miniimagenet(n, self.t)
+            self.embedding_network = build_embedding_network_miniimagenet()
+        self.embedding_network.to(self.device)
+        self.model.to(self.device)
         self.opt = torch.optim.Adam(self.model.parameters())
         self.loss = CrossEntropyLoss()
         self.track_layers = track_layers
         self.track_loss = track_loss
         self.logger = SummaryWriter('log_' + dataset) if self.track_layers or self.track_loss else None
         self.freq_track_layers = freq_track_layers
-        self.device = device
-        self.device_save = device_save
+        self.device_save = torch.device(device_save)
 
-
-    def train(self, episodes: int, batch_size: int, train_classes: List):
+    def train(self, episodes: int, batch_size: int, train_classes, test_classes):
         self.embedding_network.train()
         self.model.train()
-        for episode in range(episodes):
-            X, y, y_last = sample_batch(batch_size, train_classes, self.t, self.n, self.k, self.ohe_matrix)
+        train_data = RandomBatchSampler(train_classes, batch_size, self.n, self.k, episodes)
+        data_loader = torch.utils.data.DataLoader(train_data, shuffle=False, num_workers=4)
+        episode = 0
+        for X, y, y_last in data_loader:
             X = X.to(self.device)
             y = y.to(self.device)
+            for tensor in [X, y, y_last]:
+                tensor.squeeze_(dim=0)
             y_last = y_last.to(self.device)
             yhat = self.predict(X, y)
             yhat_last = yhat[:, :, -1]
@@ -60,6 +65,7 @@ class Snail:
                 for i, l in enumerate(self.model.parameters(recurse=True)):
                     self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
             print(f'loss episode {episode}:', loss_value)
+            episode += 1
 
     def predict(self, X, y):
         batch_size = X.shape[0]
@@ -73,6 +79,8 @@ class Snail:
         return yhat
 
     def save_weights(self, folder=''):
+        if folder != '' and folder[-1] != '/':
+            folder += '/'
         self.embedding_network.eval()
         self.model.eval()
         torch.save(self.embedding_network.to(self.device_save).state_dict(), f'{folder}embedding_network_{self.dataset}.pth')
@@ -80,7 +88,7 @@ class Snail:
 
 
 def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13,
-         force_download=False, device='cuda', device_save='cpu', use_tensorboard=True, save_destination='./'):
+         force_download=False, device='cuda', device_save='cpu', use_tensorboard=True, save_destination='model_weights/'):
     """
     Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
     When training is successfully finished, the embedding network weights and snail weights are saved, as well
@@ -101,6 +109,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
     assert dataset in ['omniglot', 'miniimagenet']
     assert 'cuda' in device or device == 'cpu'
     if not torch.cuda.is_available():
+        print('Warning: cuda is not available, fall back to cpu')
         device = 'cpu'
     np.random.seed(seed)
     set_seed(seed)
