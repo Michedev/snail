@@ -16,7 +16,7 @@ from paths import ROOT, OMNIGLOTFOLDER
 class Snail:
 
     def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
-                 device='cuda'):
+                 device='cuda', device_save='cpu'):
         self.t = n * k + 1
         self.n = n
         self.k = k
@@ -37,6 +37,8 @@ class Snail:
         self.logger = SummaryWriter('log_' + dataset) if self.track_layers or self.track_loss else None
         self.freq_track_layers = freq_track_layers
         self.device = device
+        self.device_save = device_save
+
 
     def train(self, episodes: int, batch_size: int, train_classes: List):
         self.embedding_network.train()
@@ -73,12 +75,12 @@ class Snail:
     def save_weights(self, folder=''):
         self.embedding_network.eval()
         self.model.eval()
-        torch.save(self.embedding_network.state_dict(), f'{folder}embedding_network_{self.dataset}.pth')
-        torch.save(self.model.state_dict(), f'{folder}snail_{self.dataset}.pth')
+        torch.save(self.embedding_network.to(self.device_save).state_dict(), f'{folder}embedding_network_{self.dataset}.pth')
+        torch.save(self.model.to(self.device_save).state_dict(), f'{folder}snail_{self.dataset}.pth')
 
 
 def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13,
-         force_download=False, device='cuda', use_tensorboard=True, save_destination='./'):
+         force_download=False, device='cuda', device_save='cpu', use_tensorboard=True, save_destination='./'):
     """
     Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
     When training is successfully finished, the embedding network weights and snail weights are saved, as well
@@ -92,6 +94,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
     :param seed: seed for reproducibility (default 13)
     :param force_download: :bool redownload data even if folder is present (default True)
     :param device: : device used in pytorch for training, can be "cuda*" or "cpu" (default 'cuda')
+    :param device_save: device used in pytorch when saving the wegiths, can be "cuda*" or "cpu" (default 'cpu')
     :param use_tensorboard: :bool save metrics in tensorboard (default True)
     :param save_destination: :string location of model weights (default './')
     """
@@ -109,7 +112,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
     train_classes, test_classes = get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize)
 
 
-    model = Snail(n, k, dataset, device=device, track_loss=use_tensorboard, track_layers=use_tensorboard)
+    model = Snail(n, k, dataset, device=device, device_save=device_save, track_loss=use_tensorboard, track_layers=use_tensorboard)
     model.train(episodes, batch_size, train_classes)
     model.save_weights(save_destination)
     with open('train_classes.txt', 'w') as f:
