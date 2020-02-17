@@ -3,6 +3,7 @@ from models import *
 from dataset import sample_batch, pull_data_omniglot
 from fire import Fire
 import torch
+import gc
 
 
 def main(dataset='omniglot',
@@ -16,11 +17,12 @@ def main(dataset='omniglot',
     t = n * k + 1
     if dataset == 'omniglot':
         embedding_network = build_embedding_network_omniglot().to(device)
-        snail = build_snail_omniglot(n, k).to(device)
+        snail = build_snail_omniglot(n, t).to(device)
     else:
         embedding_network = build_embedding_network_miniimagenet().to(device)
-        snail = build_snail_miniimagenet(n, k).to(device)
-
+        snail = build_snail_miniimagenet(n, t).to(device)
+    embedding_network.load_state_dict(torch.load(embedding_path))
+    snail.load_state_dict(torch.load(model_path))
     with open(test_classes_path) as f:
         test_classes = f.read()
     test_classes = list(map(Path, test_classes.split(', ')))
@@ -36,6 +38,7 @@ def main(dataset='omniglot',
         acc = (yhat_last == y_last).float().mean()
         loss_values[i] = loss_value
         acc_values[i] = acc
+        gc.collect()
     print('\n', '='*100, '\n', sep='', end='')
     print('loss values:', loss_values)
     print('avg loss:', loss_values.mean())
