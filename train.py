@@ -16,7 +16,7 @@ from paths import ROOT, OMNIGLOTFOLDER
 class Snail:
 
     def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
-                 device='cuda', device_save='cpu'):
+                 device='cuda', device_save='cpu', test_loss_freq=10):
         self.t = n * k + 1
         self.n = n
         self.k = k
@@ -40,32 +40,45 @@ class Snail:
         self.logger = SummaryWriter('log_' + dataset) if self.track_layers or self.track_loss else None
         self.freq_track_layers = freq_track_layers
         self.device_save = torch.device(device_save)
+        self.test_loss_freq = test_loss_freq
 
-    def train(self, episodes: int, batch_size: int, train_classes, test_classes):
+
+    def train(self, episodes: int, batch_size: int, train_classes, test_classes=None):
         self.embedding_network.train()
         self.model.train()
         train_data = RandomBatchSampler(train_classes, batch_size, self.n, self.k, episodes)
         data_loader = torch.utils.data.DataLoader(train_data, shuffle=False, num_workers=4)
+        if test_classes:
+            test_data = RandomBatchSampler(test_classes, batch_size, self.n, self.k, episodes)
         episode = 0
         for X, y, y_last in data_loader:
-            X = X.to(self.device)
-            y = y.to(self.device)
-            for tensor in [X, y, y_last]:
-                tensor.squeeze_(dim=0)
-            y_last = y_last.to(self.device)
-            yhat = self.predict(X, y)
-            yhat_last = yhat[:, :, -1]
-            loss_value = self.loss(yhat_last, y_last)
+            loss_value = self.calc_loss(X, y, y_last)
             loss_value.backward()
             self.opt.step()
             loss_value = float(loss_value)
             if self.track_loss:
                 self.logger.add_scalar(f'loss_{self.dataset}_last', loss_value, global_step=episode)
+                if test_classes and episode % self.test_loss_freq == 0:
+                    with torch.set_grad_enabled(False):
+                        X_test, y_test, y_last_test = test_data[episode]
+                        test_loss = self.calc_loss(X_test, y_test, y_last_test)
+                        self.logger.add_scalar(f'loss_{self.dataset}_last test', test_loss)
             if self.track_layers and episode % self.freq_track_layers == 0:
                 for i, l in enumerate(self.model.parameters(recurse=True)):
                     self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
             print(f'loss episode {episode}:', loss_value)
             episode += 1
+
+    def calc_loss(self, X, y, y_last):
+        X = X.to(self.device)
+        y = y.to(self.device)
+        y_last = y_last.to(self.device)
+        for tensor in [X, y, y_last]:
+            tensor.squeeze_(dim=0)
+        yhat = self.predict(X, y)
+        yhat_last = yhat[:, :, -1]
+        loss_value = self.loss(yhat_last, y_last)
+        return loss_value
 
     def predict(self, X, y):
         batch_size = X.shape[0]
@@ -88,7 +101,8 @@ class Snail:
 
 
 def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, seed=13,
-         force_download=False, device='cuda', device_save='cpu', use_tensorboard=True, save_destination='model_weights/'):
+         force_download=False, device='cuda', device_save='cpu', use_tensorboard=True, save_destination='model_weights/',
+         eval_test=True, test_loss_freq=10):
     """
     Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
     When training is successfully finished, the embedding network weights and snail weights are saved, as well
@@ -121,8 +135,9 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
     train_classes, test_classes = get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize)
 
 
-    model = Snail(n, k, dataset, device=device, device_save=device_save, track_loss=use_tensorboard, track_layers=use_tensorboard)
-    model.train(episodes, batch_size, train_classes)
+    model = Snail(n, k, dataset, device=device, device_save=device_save, track_loss=use_tensorboard, track_layers=use_tensorboard,
+                  test_loss_freq=test_loss_freq)
+    model.train(episodes, batch_size, train_classes, None if not eval_test else test_classes)
     model.save_weights(save_destination)
     with open('train_classes.txt', 'w') as f:
         f.write(', '.join(train_classes))
