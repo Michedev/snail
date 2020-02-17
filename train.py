@@ -73,7 +73,7 @@ class Snail:
             if self.track_layers and episode % self.freq_track_layers == 0:
                 for i, l in enumerate(self.model.parameters(recurse=True)):
                     self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
-            if episode % 100:
+            if episode % 100 == 0:
                 print(f'loss episode {episode}:', loss_value)
             episode += 1
 

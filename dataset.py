@@ -59,7 +59,7 @@ class RandomBatchSampler(torch.utils.data.Dataset):
         return self.episodes
 
     def __getitem__(self, i):
-        return sample_batch(self.batch_size, self.class_pool, self.t, self.n, self.k, self.ohe)
+        return sample_batch(self.batch_size, self.class_pool, self.t, self.n, self.k, ohe_matrix=self.ohe)
 
 
 def load_and_transform(name_image, rotation):
