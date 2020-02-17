@@ -42,7 +42,7 @@ class Snail:
         self.device_save = torch.device(device_save)
         self.test_loss_freq = test_loss_freq
         self.random_rotation = random_rotation
-
+        self.track_loss_freq = 10
 
     def train(self, episodes: int, batch_size: int, train_classes, test_classes=None):
         self.embedding_network.train()
@@ -53,17 +53,23 @@ class Snail:
             test_data = RandomBatchSampler(test_classes, batch_size, self.n, self.k, episodes, self.random_rotation)
         episode = 0
         for X, y, y_last in data_loader:
-            loss_value = self.calc_loss(X, y, y_last)
+            logging_episode = self.track_loss and episode % self.track_loss_freq == 0
+            if logging_episode:
+                loss_value, accuracy_train = self.calc_loss(X, y, y_last, logging_episode)
+            else:
+                loss_value = self.calc_loss(X, y, y_last, logging_episode)
             loss_value.backward()
             self.opt.step()
             loss_value = float(loss_value)
-            if self.track_loss:
+            if logging_episode:
                 self.logger.add_scalar(f'loss_{self.dataset}_last', loss_value, global_step=episode)
+                self.logger.add_scalar(f'accuracy_{self.dataset}_last', accuracy_train, global_step=episode)
                 if test_classes and episode % self.test_loss_freq == 0:
                     with torch.set_grad_enabled(False):
                         X_test, y_test, y_last_test = test_data[episode]
-                        test_loss = self.calc_loss(X_test, y_test, y_last_test)
+                        test_loss, accuracy_test = self.calc_loss(X_test, y_test, y_last_test, also_accuracy=True)
                         self.logger.add_scalar(f'loss_{self.dataset}_last test', test_loss)
+                        self.logger.add_scalar(f'accuracy_{self.dataset}_last test', accuracy_test, global_step=episode)
             if self.track_layers and episode % self.freq_track_layers == 0:
                 for i, l in enumerate(self.model.parameters(recurse=True)):
                     self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
@@ -71,16 +77,20 @@ class Snail:
                 print(f'loss episode {episode}:', loss_value)
             episode += 1
 
-    def calc_loss(self, X, y, y_last):
+    def calc_loss(self, X, y, y_last, also_accuracy=True):
         X = X.to(self.device)
         y = y.to(self.device)
         y_last = y_last.to(self.device)
         for tensor in [X, y, y_last]:
             tensor.squeeze_(dim=0)
         yhat = self.predict(X, y)
-        yhat_last = yhat[:, :, -1]
-        loss_value = self.loss(yhat_last, y_last)
-        return loss_value
+        p_yhat_last = yhat[:, :, -1]
+        loss_value = self.loss(p_yhat_last, y_last)
+        if not also_accuracy:
+            return loss_value
+        yhat_last = p_yhat_last.argmax(dim=1)
+        accuracy = (yhat_last == y_last).float().mean()
+        return loss_value, accuracy
 
     def predict(self, X, y):
         batch_size = X.shape[0]
