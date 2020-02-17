@@ -10,7 +10,7 @@ from skimage import io, transform
 
 from paths import OMNIGLOTFOLDER
 
-def sample_batch(batch_size, train_classes, t, n, k, ohe_matrix=None):
+def sample_batch(batch_size, train_classes, t, n, k, random_rotation=True, ohe_matrix=None):
     X = torch.zeros(batch_size, t, 28, 28, 1)
     y = torch.zeros(batch_size, t, n)
     y_last_class = torch.zeros(batch_size, dtype=torch.int64)
@@ -19,21 +19,25 @@ def sample_batch(batch_size, train_classes, t, n, k, ohe_matrix=None):
     batch_classes = [sample(train_classes, n) for _ in range(batch_size)]
     for i_batch in range(batch_size):
         image_names_batch = []
+        rotations = {}
         for i_class in range(n):
             name_images = sample(batch_classes[i_batch][i_class].files(), k)
             image_names_batch += name_images
             y[i_batch, i_class * k: (i_class + 1) * k] = ohe_matrix[[i_class] * k]
+            rotation = 0 if not random_rotation else 90 * randint(0, 3)
+            rotations[i_class] = rotation
             for i_img, name_image in enumerate(name_images):
-                img = load_and_transform(name_image)
+                img = load_and_transform(name_image, rotation)
                 X[i_batch, i_class * k + i_img, :, :, :] = torch.from_numpy(img).unsqueeze(-1)
                 del img
         i_last_class = randint(0, n-1)
         last_class = batch_classes[i_batch][i_last_class]
         last_class_images = last_class.files()
         last_img = None
+        rotation_last = rotations[i_last_class]
         while not last_img or last_img in image_names_batch:
             last_img = sample(last_class_images, 1)[0]
-        last_img = load_and_transform(last_img)
+        last_img = load_and_transform(last_img, rotation_last)
         X[i_batch, -1] = torch.from_numpy(last_img).unsqueeze(dim=-1)
         y_last_class[i_batch] = i_last_class
     return X, y, y_last_class
@@ -57,9 +61,10 @@ class RandomBatchSampler(torch.utils.data.Dataset):
         return sample_batch(self.batch_size, self.class_pool, self.t, self.n, self.k, self.ohe)
 
 
-def load_and_transform(name_image):
+def load_and_transform(name_image, rotation):
     img = io.imread(name_image, as_gray=True)
     img = transform.resize(img, (28, 28))
+    img = transform.rotate(img, rotation)
     return img
 
 
