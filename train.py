@@ -96,7 +96,7 @@ class Snail:
                 if global_step % 100 == 0:
                     print(f'loss episode {global_step}:', loss_value)
                     if logging_step:
-                        print(f'accuracy {global_step}:', accuracy_train)
+                        print(f'accuracy {global_step}:', accuracy_train.item())
                 global_step += 1
             train_data.shuffle()
 
