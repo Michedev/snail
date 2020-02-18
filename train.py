@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from multiprocessing import cpu_count
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, RandomSampler
 
 from dataset import OmniglotMetaLearning, get_train_test_classes, pull_data_omniglot
 from models import build_embedding_network_miniimagenet, build_embedding_network_omniglot, build_snail_miniimagenet, build_snail_omniglot
@@ -59,7 +59,9 @@ class Snail:
         global_step = 0
         for epoch in range(epochs):
             if test_classes:
-                test_iter = iter(test_data)
+                test_data.shuffle()
+                test_sampler = RandomSampler(test_data, replacement=True, num_samples=batch_size)
+                test_iter = iter(test_sampler)
             for X, y, y_last in data_loader:
                 logging_step = self.track_loss and global_step % self.track_loss_freq == 0
                 if logging_step:
