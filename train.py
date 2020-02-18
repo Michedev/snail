@@ -60,6 +60,7 @@ class Snail:
             test_data.shuffle()
         global_step = 0
         for epoch in range(epochs):
+            print('epoch', epoch)
             if test_classes:
                 test_iter = iter(test_loader)
             for X, y, y_last in data_loader:
@@ -94,9 +95,9 @@ class Snail:
                             for param_name, param in l.named_parameters():
                                 self.logger.add_histogram(f'{type(l)}_{i}/{param_name}', param, global_step=global_step)
                 if global_step % 100 == 0:
-                    print(f'loss episode {global_step}:', loss_value)
+                    print(f'loss step {global_step}:', loss_value)
                     if logging_step:
-                        print(f'accuracy {global_step}:', accuracy_train.item())
+                        print(f'accuracy step {global_step}:', accuracy_train.item())
                 global_step += 1
             train_data.shuffle()
 
