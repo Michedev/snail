@@ -12,7 +12,7 @@ from random import seed as set_seed
 import torch
 from torch.nn import *
 
-from paths import ROOT, OMNIGLOTFOLDER
+from paths import ROOT, OMNIGLOTFOLDER, WEIGHTSFOLDER
 
 
 class Snail:
@@ -124,18 +124,17 @@ class Snail:
         yhat = self.model(X_embedding)
         return yhat
 
-    def save_weights(self, folder=''):
-        if folder != '' and folder[-1] != '/':
-            folder += '/'
+    def save_weights(self):
         self.embedding_network.eval()
         self.model.eval()
-        torch.save(self.embedding_network.to(self.device_save).state_dict(), f'{folder}embedding_network_{self.dataset}.pth')
-        torch.save(self.model.to(self.device_save).state_dict(), f'{folder}snail_{self.dataset}.pth')
+        torch.save(self.embedding_network.to(self.device_save).state_dict(),
+                   WEIGHTSFOLDER / f'embedding_network_{self.dataset}_{self.n}_{self.k}.pth')
+        torch.save(self.model.to(self.device_save).state_dict(), WEIGHTSFOLDER / f'snail_{self.dataset}_{self.n}_{self.k}.pth')
 
 
 def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32, random_rotation=True,
          seed=13, force_download=False, device='cuda', device_save='cpu', use_tensorboard=True,
-         save_destination='model_weights/', eval_test=True, test_loss_freq=10):
+         eval_test=True, test_loss_freq=10):
     """
     Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
     When training is successfully finished, the embedding network weights and snail weights are saved, as well
@@ -151,7 +150,6 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32
     :param device: : device used in pytorch for training, can be "cuda*" or "cpu" (default 'cuda')
     :param device_save: device used in pytorch when saving the wegiths, can be "cuda*" or "cpu" (default 'cpu')
     :param use_tensorboard: :bool save metrics in tensorboard (default True)
-    :param save_destination: :string location of model weights (default './')
     """
     assert dataset in ['omniglot', 'miniimagenet']
     assert 'cuda' in device or device == 'cpu'
@@ -171,7 +169,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32
     model = Snail(n, k, dataset, device=device, device_save=device_save, track_loss=use_tensorboard, track_layers=use_tensorboard,
                   test_loss_freq=test_loss_freq, random_rotation=random_rotation)
     model.train(epochs, batch_size, train_classes, None if not eval_test else test_classes)
-    model.save_weights(save_destination)
+    model.save_weights()
     with open('train_classes.txt', 'w') as f:
         f.write(', '.join(train_classes))
     with open('test_classes.txt', 'w') as f:
