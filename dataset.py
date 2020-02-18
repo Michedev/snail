@@ -99,7 +99,7 @@ def load_and_transform(name_image, rotation):
 
 
 def get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize):
-    if not train_classes_file.exists() or test_classes_file.exists():
+    if not train_classes_file.exists() or not test_classes_file.exists():
         index_classes = np.arange(len(classes))
         np.random.shuffle(index_classes)
         index_train = index_classes[:trainsize]
@@ -107,7 +107,6 @@ def get_train_test_classes(classes, test_classes_file, train_classes_file, train
         train_classes = [classes[i_train] for i_train in index_train]
         test_classes = [classes[i_test] for i_test in index_test]
     else:
-
         with open(train_classes_file) as f:
             train_classes = f.read()
         train_classes = train_classes.split(', ')
