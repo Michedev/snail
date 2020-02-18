@@ -55,13 +55,13 @@ class Snail:
                                  drop_last=True)
         if test_classes:
             test_data = OmniglotMetaLearning(test_classes, self.n, self.k, self.random_rotation)
+            test_loader = DataLoader(test_data, sampler=RandomSampler(test_data, replacement=True),
+                                     batch_size=batch_size)
             test_data.shuffle()
         global_step = 0
         for epoch in range(epochs):
             if test_classes:
-                test_data.shuffle()
-                test_sampler = RandomSampler(test_data, replacement=True, num_samples=batch_size)
-                test_iter = iter(test_sampler)
+                test_iter = iter(test_loader)
             for X, y, y_last in data_loader:
                 logging_step = self.track_loss and global_step % self.track_loss_freq == 0
                 if logging_step:
@@ -86,8 +86,8 @@ class Snail:
                         self.logger.add_scalar(f'Test/loss_{self.dataset}_last', test_loss, global_step=global_step)
                         self.logger.add_scalar(f'Test/acc_{self.dataset}_last', accuracy_test,
                                                global_step=global_step)
-                    self.logger.add_scalar(f'loss_{self.dataset}_last', losses_dict, global_step=global_step)
-                    self.logger.add_scalar(f'accuracy_{self.dataset}_last', acc_dict, global_step=global_step)
+                    self.logger.add_scalars(f'loss_{self.dataset}_last', losses_dict, global_step=global_step)
+                    self.logger.add_scalars(f'accuracy_{self.dataset}_last', acc_dict, global_step=global_step)
                 if self.track_layers and global_step % self.freq_track_layers == 0:
                     for i, l in enumerate(self.model.modules()):
                         if hasattr(l, 'parameters'):
