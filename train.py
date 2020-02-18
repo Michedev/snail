@@ -1,9 +1,11 @@
 from typing import List
 
 import numpy as np
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
+from multiprocessing import cpu_count
+from torch.utils.data import DataLoader
 
-from dataset import RandomBatchSampler, get_train_test_classes, pull_data_omniglot
+from dataset import OmniglotMetaLearning, get_train_test_classes, pull_data_omniglot
 from models import build_embedding_network_miniimagenet, build_embedding_network_omniglot, build_snail_miniimagenet, build_snail_omniglot
 from fire import Fire
 from random import seed as set_seed
@@ -44,38 +46,57 @@ class Snail:
         self.random_rotation = random_rotation
         self.track_loss_freq = 10
 
-    def train(self, episodes: int, batch_size: int, train_classes, test_classes=None):
+    def train(self, epochs: int, batch_size: int, train_classes, test_classes=None):
         self.embedding_network.train()
         self.model.train()
-        train_data = RandomBatchSampler(train_classes, batch_size, self.n, self.k, episodes, self.random_rotation)
-        data_loader = torch.utils.data.DataLoader(train_data, shuffle=False, num_workers=4)
+        train_data = OmniglotMetaLearning(train_classes, self.n, self.k, self.random_rotation)
+        data_loader = DataLoader(train_data, batch_size=batch_size,
+                                 shuffle=True, num_workers=cpu_count(),
+                                 drop_last=True)
         if test_classes:
-            test_data = RandomBatchSampler(test_classes, batch_size, self.n, self.k, episodes, self.random_rotation)
-        episode = 0
-        for X, y, y_last in data_loader:
-            logging_episode = self.track_loss and episode % self.track_loss_freq == 0
-            if logging_episode:
-                loss_value, accuracy_train = self.calc_loss(X, y, y_last, logging_episode)
-            else:
-                loss_value = self.calc_loss(X, y, y_last, logging_episode)
-            loss_value.backward()
-            self.opt.step()
-            loss_value = float(loss_value)
-            if logging_episode:
-                self.logger.add_scalar(f'loss_{self.dataset}_last', loss_value, global_step=episode)
-                self.logger.add_scalar(f'accuracy_{self.dataset}_last', accuracy_train, global_step=episode)
-                if test_classes and episode % self.test_loss_freq == 0:
-                    with torch.set_grad_enabled(False):
-                        X_test, y_test, y_last_test = test_data[episode]
-                        test_loss, accuracy_test = self.calc_loss(X_test, y_test, y_last_test, also_accuracy=True)
-                        self.logger.add_scalar(f'loss_{self.dataset}_last test', test_loss)
-                        self.logger.add_scalar(f'accuracy_{self.dataset}_last test', accuracy_test, global_step=episode)
-            if self.track_layers and episode % self.freq_track_layers == 0:
-                for i, l in enumerate(self.model.parameters(recurse=True)):
-                    self.logger.add_histogram(f'layer_{i}', l, global_step=episode)
-            if episode % 100 == 0:
-                print(f'loss episode {episode}:', loss_value)
-            episode += 1
+            test_data = OmniglotMetaLearning(test_classes, self.n, self.k, self.random_rotation)
+            test_data.shuffle()
+        global_step = 0
+        for epoch in range(epochs):
+            if test_classes:
+                test_iter = iter(test_data)
+            for X, y, y_last in data_loader:
+                logging_step = self.track_loss and global_step % self.track_loss_freq == 0
+                if logging_step:
+                    loss_value, accuracy_train = self.calc_loss(X, y, y_last, logging_step)
+                else:
+                    loss_value = self.calc_loss(X, y, y_last, logging_step)
+                loss_value.backward()
+                self.opt.step()
+                loss_value = float(loss_value)
+                if logging_step:
+                    losses_dict = dict(train=loss_value)
+                    acc_dict = dict(train=accuracy_train)
+                    self.logger.add_scalar(f'Train/loss_{self.dataset}_last', loss_value, global_step=global_step)
+                    self.logger.add_scalar(f'Train/acc_{self.dataset}_last', accuracy_train, global_step=global_step)
+
+                    if test_classes and global_step % self.test_loss_freq == 0:
+                        with torch.set_grad_enabled(False):
+                            X_test, y_test, y_last_test = next(test_iter)
+                            test_loss, accuracy_test = self.calc_loss(X_test, y_test, y_last_test, also_accuracy=True)
+                            losses_dict['test'] = test_loss
+                            acc_dict['test'] = accuracy_test
+                        self.logger.add_scalar(f'Test/loss_{self.dataset}_last', test_loss, global_step=global_step)
+                        self.logger.add_scalar(f'Test/acc_{self.dataset}_last', accuracy_test,
+                                               global_step=global_step)
+                    self.logger.add_scalar(f'loss_{self.dataset}_last', losses_dict, global_step=global_step)
+                    self.logger.add_scalar(f'accuracy_{self.dataset}_last', acc_dict, global_step=global_step)
+                if self.track_layers and global_step % self.freq_track_layers == 0:
+                    for i, l in enumerate(self.model.modules()):
+                        if hasattr(l, 'parameters'):
+                            for param_name, param in l.named_parameters():
+                                self.logger.add_histogram(f'{type(l)}_{i}/{param_name}', param, global_step=global_step)
+                if global_step % 100 == 0:
+                    print(f'loss episode {global_step}:', loss_value)
+                    if logging_step:
+                        print(f'accuracy {global_step}:', accuracy_train)
+                global_step += 1
+            train_data.shuffle()
 
     def calc_loss(self, X, y, y_last, also_accuracy=True):
         X = X.to(self.device)
@@ -112,7 +133,7 @@ class Snail:
         torch.save(self.model.to(self.device_save).state_dict(), f'{folder}snail_{self.dataset}.pth')
 
 
-def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_size=32, random_rotation=True,
+def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32, random_rotation=True,
          seed=13, force_download=False, device='cuda', device_save='cpu', use_tensorboard=True,
          save_destination='model_weights/', eval_test=True, test_loss_freq=10):
     """
@@ -123,7 +144,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
     :param n: the N in N-way in meta-learning i.e. number of class sampled in each row of the dataset (default 5)
     :param k: the K in K-shot in meta-learning i.e. number of observations for each class (default 5)
     :param trainsize: number of class used in training (default 1200)
-    :param episodes: time of model updates (default 5000)
+    :param epochs: times that model see the dataset (default 200)
     :param batch_size: size of a training batch (default 32)
     :param seed: seed for reproducibility (default 13)
     :param force_download: :bool redownload data even if folder is present (default True)
@@ -149,7 +170,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, episodes=5_000, batch_siz
 
     model = Snail(n, k, dataset, device=device, device_save=device_save, track_loss=use_tensorboard, track_layers=use_tensorboard,
                   test_loss_freq=test_loss_freq, random_rotation=random_rotation)
-    model.train(episodes, batch_size, train_classes, None if not eval_test else test_classes)
+    model.train(epochs, batch_size, train_classes, None if not eval_test else test_classes)
     model.save_weights(save_destination)
     with open('train_classes.txt', 'w') as f:
         f.write(', '.join(train_classes))
