@@ -1,12 +1,13 @@
 from typing import List
-
+from itertools import chain
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from multiprocessing import cpu_count
 from torch.utils.data import DataLoader, RandomSampler
 
 from dataset import OmniglotMetaLearning, get_train_test_classes, pull_data_omniglot
-from models import build_embedding_network_miniimagenet, build_embedding_network_omniglot, build_snail_miniimagenet, build_snail_omniglot
+from models import build_embedding_network_miniimagenet, build_embedding_network_omniglot, build_snail_miniimagenet, \
+    build_snail_omniglot
 from fire import Fire
 from random import seed as set_seed
 import torch
@@ -18,7 +19,7 @@ from paths import ROOT, OMNIGLOTFOLDER, WEIGHTSFOLDER
 class Snail:
 
     def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
-                 device='cuda', device_save='cpu', test_loss_freq=10, random_rotation=True):
+                 device='cuda', track_loss_freq=10, random_rotation=True):
         self.t = n * k + 1
         self.n = n
         self.k = k
@@ -35,16 +36,14 @@ class Snail:
             self.embedding_network = build_embedding_network_miniimagenet()
         self.embedding_network.to(self.device)
         self.model.to(self.device)
-        self.opt = torch.optim.Adam(self.model.parameters())
+        self.opt = torch.optim.Adam(chain(self.embedding_network.parameters(), self.model.parameters()))
         self.loss = CrossEntropyLoss()
         self.track_layers = track_layers
         self.track_loss = track_loss
         self.logger = SummaryWriter('log_' + dataset) if self.track_layers or self.track_loss else None
         self.freq_track_layers = freq_track_layers
-        self.device_save = torch.device(device_save)
-        self.test_loss_freq = test_loss_freq
         self.random_rotation = random_rotation
-        self.track_loss_freq = 10
+        self.track_loss_freq = track_loss_freq
 
     def train(self, epochs: int, batch_size: int, train_classes, test_classes=None):
         self.embedding_network.train()
@@ -78,7 +77,7 @@ class Snail:
                     self.logger.add_scalar(f'Train/loss_{self.dataset}_last', loss_value, global_step=global_step)
                     self.logger.add_scalar(f'Train/acc_{self.dataset}_last', accuracy_train, global_step=global_step)
 
-                    if test_classes and global_step % self.test_loss_freq == 0:
+                    if test_classes and logging_step:
                         with torch.set_grad_enabled(False):
                             X_test, y_test, y_last_test = next(test_iter)
                             test_loss, accuracy_test = self.calc_loss(X_test, y_test, y_last_test, also_accuracy=True)
@@ -127,17 +126,40 @@ class Snail:
         yhat = self.model(X_embedding)
         return yhat
 
+    @property
+    def embedding_network_fname(self):
+        return f'embedding_network_{self.dataset}_{self.n}_{self.k}.pth'
+
+    @property
+    def embedding_network_path(self):
+        return WEIGHTSFOLDER / self.embedding_network_fname
+
+    @property
+    def snail_fname(self):
+        return f'snail_{self.dataset}_{self.n}_{self.k}.pth'
+
+    @property
+    def snail_path(self):
+        return WEIGHTSFOLDER / self.snail_fname
+
+    def load_if_exists(self):
+        if self.embedding_network_path.exists():
+            self.embedding_network.load_state_dict(torch.load(self.embedding_network_path))
+        if self.snail_path.exists():
+            self.model.load_state_dict(torch.load(self.snail_path))
+
     def save_weights(self):
         self.embedding_network.eval()
         self.model.eval()
-        torch.save(self.embedding_network.to(self.device_save).state_dict(),
-                   WEIGHTSFOLDER / f'embedding_network_{self.dataset}_{self.n}_{self.k}.pth')
-        torch.save(self.model.to(self.device_save).state_dict(), WEIGHTSFOLDER / f'snail_{self.dataset}_{self.n}_{self.k}.pth')
+        torch.save(self.embedding_network.state_dict(),
+                   WEIGHTSFOLDER / self.embedding_network_fname)
+        torch.save(self.model.state_dict(),
+                   WEIGHTSFOLDER / self.snail_fname)
 
 
 def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32, random_rotation=True,
-         seed=13, force_download=False, device='cuda', device_save='cpu', use_tensorboard=True,
-         eval_test=True, test_loss_freq=10):
+         seed=13, force_download=False, device='cuda', use_tensorboard=True,
+         eval_test=True, track_loss_freq=10, load_weights=True):
     """
     Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
     When training is successfully finished, the embedding network weights and snail weights are saved, as well
@@ -145,14 +167,17 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32
     :param dataset: Dataset used for training,  can be only {'omniglot', 'miniimagenet'} (defuult 'omniglot')
     :param n: the N in N-way in meta-learning i.e. number of class sampled in each row of the dataset (default 5)
     :param k: the K in K-shot in meta-learning i.e. number of observations for each class (default 5)
-    :param trainsize: number of class used in training (default 1200)
+    :param trainsize: number of class used in training (default 1200) (the remaining classes are for test)
     :param epochs: times that model see the dataset (default 200)
     :param batch_size: size of a training batch (default 32)
+    :param random_rotation: :bool rotate the class images by multiples of 90 degrees (default True)
     :param seed: seed for reproducibility (default 13)
     :param force_download: :bool redownload data even if folder is present (default True)
     :param device: : device used in pytorch for training, can be "cuda*" or "cpu" (default 'cuda')
-    :param device_save: device used in pytorch when saving the wegiths, can be "cuda*" or "cpu" (default 'cpu')
     :param use_tensorboard: :bool save metrics in tensorboard (default True)
+    :param eval_test: :bool after test_loss_freq batch calculate loss and accuracy on test set (default True)
+    :param track_loss_freq: :int step frequency of loss/accuracy save into tensorboard (default 10)
+    :param load_weights: :bool if available load under model_weights snail and embedding network weights (default True)
     """
     assert dataset in ['omniglot', 'miniimagenet']
     assert 'cuda' in device or device == 'cpu'
@@ -168,9 +193,11 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32
     test_classes_file = ROOT / 'test_classes.txt'
     train_classes, test_classes = get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize)
 
-
-    model = Snail(n, k, dataset, device=device, device_save=device_save, track_loss=use_tensorboard, track_layers=use_tensorboard,
-                  test_loss_freq=test_loss_freq, random_rotation=random_rotation)
+    model = Snail(n, k, dataset, device=device, track_loss=use_tensorboard,
+                  track_layers=use_tensorboard,
+                  track_loss_freq=track_loss_freq, random_rotation=random_rotation)
+    if load_weights:
+        model.load_if_exists()
     model.train(epochs, batch_size, train_classes, None if not eval_test else test_classes)
     model.save_weights()
     with open('train_classes.txt', 'w') as f:

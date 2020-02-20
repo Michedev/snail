@@ -8,8 +8,8 @@ import gc
 
 def main(dataset='omniglot',
          n=5, k=5, batch_size=32,
-         model_path='model_weights/snail_omniglot.pth',
-         embedding_path='model_weights/embedding_network_omniglot.pth',
+         model_path='model_weights/snail_omniglot_5_5.pth',
+         embedding_path='model_weights/embedding_network_omniglot_5_5.pth',
          test_classes_path='test_classes.txt',
          device='cpu', n_sample=500):
     assert dataset in ['omniglot', 'miniimagenet']
