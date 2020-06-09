@@ -57,8 +57,8 @@ class Snail:
                                  shuffle=True, num_workers=cpu_count(),
                                  drop_last=True)
         if test_classes:
-            test_data = OmniglotMetaLearning(train_classes, self.n, self.k, self.random_rotation) if self.is_omniglot else\
-                    MiniImageNetMetaLearning(train_classes, self.n, self.k, self.random_rotation)
+            test_data = OmniglotMetaLearning(test_classes, self.n, self.k, self.random_rotation) if self.is_omniglot else\
+                    MiniImageNetMetaLearning(test_classes, self.n, self.k, self.random_rotation)
             test_loader = DataLoader(test_data, sampler=RandomSampler(test_data, replacement=True),
                                      batch_size=batch_size)
             test_data.shuffle()
