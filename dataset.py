@@ -187,5 +187,5 @@ def pull_data_miniimagenet(force):
             download_file_from_google_drive(url, MINIIMAGENETFOLDER, zipfname)
             if dstfolder.exists() and force:
                 dstfolder.removedirs()
-            os.system(f'tar -xvf {MINIIMAGENETFOLDER}')
+            os.system(f'tar -xvf {zippath}')
             zippath.remove()
