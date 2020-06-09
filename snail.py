@@ -61,7 +61,7 @@ class Snail:
                                      batch_size=batch_size, drop_last=True)
         train_engine = Engine(lambda engine, batch: self.opt_step(*batch, return_accuracy=False))
 
-        @train_engine.on(Events.EPOCH_COMPLETED(self.track_loss_freq))
+        @train_engine.on(Events.EPOCH_COMPLETED(lambda: self.track_loss, every=self.track_loss_freq))
         def eval_test(engine):
             self.tb_log(train_loader, self.logger, engine.state.epoch, is_train=True)
             if test_classes:
