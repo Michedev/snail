@@ -61,7 +61,7 @@ class Snail:
                                      batch_size=batch_size, drop_last=True)
         train_engine = Engine(lambda engine, batch: self.opt_step(*batch, return_accuracy=False))
 
-        @train_engine.on(Events.EPOCH_COMPLETED(lambda: self.track_loss, every=self.track_loss_freq))
+        @train_engine.on(Events.EPOCH_COMPLETED(lambda *x: self.track_loss, every=self.track_loss_freq))
         def eval_test(engine):
             self.tb_log(train_loader, self.logger, engine.state.epoch, is_train=True)
             if test_classes:
@@ -72,7 +72,7 @@ class Snail:
             torch.save(self.model.state_dict(), self.snail_path)
             torch.save(self.embedding_network.state_dict(), self.embedding_network_path)
 
-        @train_engine.on(Events.ITERATION_COMPLETED(lambda: self.track_layers, every=self.track_params_freq))
+        @train_engine.on(Events.ITERATION_COMPLETED(lambda *x: self.track_layers, every=self.track_params_freq))
         def tb_log_histogram_params(engine):
             for name, params in self.model.named_parameters():
                 self.logger.add_histogram(name.replace('.', '/'), params, engine.state.iteration)
