@@ -11,15 +11,15 @@ class DenseBlock(Module):
         self.in_filters = in_filters
         self.out_filters = out_filters
         self.causal_conv1 = Conv1d(in_filters, out_filters, kernel_size=2,
-                                   dilation=dilation, padding=ceil(dilation/2))
+                                   dilation=dilation, padding=ceil(dilation / 2))
         self.causal_conv2 = Conv1d(in_filters, out_filters, kernel_size=2,
-                                   dilation=dilation, padding=ceil(dilation/2))
+                                   dilation=dilation, padding=ceil(dilation / 2))
 
     def forward(self, input):
         xf, xg = self.causal_conv1(input), self.causal_conv2(input)
         activations = Tanh()(xf) * Sigmoid()(xg)
         if activations.shape[-1] == input.shape[-1] + 1:
-          activations = activations[:, :, :-1]
+            activations = activations[:, :, :-1]
         return torch.cat([input, activations], dim=1)
 
 
@@ -28,8 +28,9 @@ def TCBlock(seq_len: int, in_filters: int, filters: int):
     model = Sequential()
     for i in range(log_seq_len):
         block = DenseBlock(2 ** i, (in_filters + i * filters), filters)
-        model.add_module(f'dense_{i+1}', block)
+        model.add_module(f'dense_{i + 1}', block)
     return model
+
 
 class AttentionBlock(Module):
 
