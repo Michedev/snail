@@ -4,3 +4,4 @@ fire==0.2.1
 path==13.1.0
 wget==3.2
 scikit-image==0.16.2
+tqdm

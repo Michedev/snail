@@ -12,7 +12,7 @@ from fire import Fire
 from random import seed as set_seed
 import torch
 from torch.nn import *
-from radam import RAdam
+
 
 from paths import ROOT, OMNIGLOTFOLDER, WEIGHTSFOLDER
 
@@ -37,7 +37,7 @@ class Snail:
             self.embedding_network = build_embedding_network_miniimagenet()
         self.embedding_network.to(self.device)
         self.model.to(self.device)
-        self.opt = RAdam(chain(self.embedding_network.parameters(), self.model.parameters()))
+        self.opt = torch.optim.Adam(chain(self.embedding_network.parameters(), self.model.parameters()), lr=0.0003)
         self.loss = CrossEntropyLoss()
         self.track_layers = track_layers
         self.track_loss = track_loss
@@ -100,6 +100,8 @@ class Snail:
                         print(f'accuracy step {global_step}:', accuracy_train.item())
                 global_step += 1
             train_data.shuffle()
+            if epoch % 100 == 0:
+                self.save_weights()
 
     def calc_loss(self, X, y, y_last, also_accuracy=True):
         X = X.to(self.device)
