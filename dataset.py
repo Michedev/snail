@@ -180,6 +180,11 @@ def pull_data_miniimagenet(force):
         MINIIMAGENETFOLDER.makedirs()
     for zipfname, url in [('train.tar', train_link), ('test.tar', test_link)]:
         zippath = MINIIMAGENETFOLDER / zipfname
-        wget.download(url, out=zippath)
-        with zipfile.ZipFile(zippath) as z:
-            z.extractall(MINIIMAGENETFOLDER)
+        dstfolder = MINIIMAGENETFOLDER / zipfname.split('.')[0]
+        if not dstfolder.exists() or force:
+            wget.download(url, out=zippath)
+            if dstfolder.exists() and force:
+                dstfolder.removedirs()
+            with zipfile.ZipFile(zippath) as z:
+                z.extractall(MINIIMAGENETFOLDER)
+            zippath.remove()
