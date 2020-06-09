@@ -106,8 +106,8 @@ class Snail:
             mean_acc = engine.state.sum_acc / engine.state.steps
             logger.add_scalar(f'epoch_loss/{label}', mean_loss, epoch)
             logger.add_scalar(f'epoch_acc/{label}', mean_acc, epoch)
-            print(label, 'epoch loss', mean_loss)
-            print(label, 'epoch accuracy', mean_acc)
+            print(label, 'epoch loss', mean_loss.item())
+            print(label, 'epoch accuracy', mean_acc.item())
 
         eval_engine.run(dataloader, 1)
 

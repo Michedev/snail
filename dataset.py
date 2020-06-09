@@ -137,7 +137,7 @@ class MiniImageNetMetaLearning(MetaLearningDataset):
 def load_and_transform(name_image, rotation, image_size):
     assert len(image_size) == 3
     img = io.imread(name_image, as_gray=image_size[-1] == 1)
-    img = transform.resize(img, image_size[:-1])
+    img = transform.resize(img, image_size[:-1], mode='constant')
     img = transform.rotate(img, rotation)
     return img
 
