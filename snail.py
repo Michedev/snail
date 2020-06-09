@@ -72,7 +72,7 @@ class Snail:
             torch.save(self.model.state_dict(), self.snail_path)
             torch.save(self.embedding_network.state_dict(), self.embedding_network_path)
 
-        @train_engine.on(Events.ITERATION_COMPLETED(every=self.track_params_freq))
+        @train_engine.on(Events.ITERATION_COMPLETED(self.track_layers, every=self.track_params_freq))
         def tb_log_histogram_params(engine):
             for name, params in self.model.named_parameters():
                 self.logger.add_histogram(name.replace('.', '/'), params, engine.state.iteration)
