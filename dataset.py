@@ -66,7 +66,10 @@ def fit_last_image(X, classes, image_names_batch, n, rotations):
     while not last_img or last_img in image_names_batch:
         last_img = sample(last_class_images, 1)[0]
     last_img = load_and_transform(last_img, rotation_last, X.shape[1:])
-    X[-1] = torch.from_numpy(last_img).unsqueeze(dim=-1)
+    last_img = torch.from_numpy(last_img)
+    if X.shape[-1] == 1:
+        last_img = last_img.unsqueeze(-1)
+    X[-1] = last_img
     return i_last_class
 
 
