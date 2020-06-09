@@ -83,7 +83,10 @@ def fit_train_task(X, y, classes, k, n, ohe_matrix, random_rotation):
         rotations[i_class] = rotation
         for i_img, name_image in enumerate(name_images):
             img = load_and_transform(name_image, rotation, X.shape[1:])
-            X[i_class * k + i_img, :, :, :] = torch.from_numpy(img).unsqueeze(-1)
+            img = torch.from_numpy(img)
+            if X.shape[-1] == 1:
+                img = img.unsqueeze(-1)
+            X[i_class * k + i_img, :, :, :] = img
             del img
     return image_names_batch, rotations
 
