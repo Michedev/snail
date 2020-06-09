@@ -50,6 +50,8 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32
         pull_data_miniimagenet(force_download)
         train_classes = (MINIIMAGENETFOLDER / 'train').dirs()
         test_classes = (MINIIMAGENETFOLDER / 'test').dirs()
+    print('train classes', len(train_classes))
+    print('test classes', len(test_classes))
     model = Snail(n, k, dataset, device=device, track_loss=use_tensorboard,
                   track_layers=log_weights and use_tensorboard, track_loss_freq=track_loss_freq,
                   track_params_freq=track_weights_freq, random_rotation=random_rotation)
