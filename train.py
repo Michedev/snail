@@ -5,7 +5,7 @@ from torch.utils.tensorboard import SummaryWriter
 from multiprocessing import cpu_count
 from torch.utils.data import DataLoader, RandomSampler
 
-from dataset import OmniglotMetaLearning, get_train_test_classes, pull_data_omniglot
+from dataset import OmniglotMetaLearning, get_train_test_classes, pull_data_omniglot, pull_data_miniimagenet
 from models import build_embedding_network_miniimagenet, build_embedding_network_omniglot, build_snail_miniimagenet, \
     build_snail_omniglot
 from fire import Fire
@@ -14,13 +14,14 @@ import torch
 from torch.nn import *
 
 
-from paths import ROOT, OMNIGLOTFOLDER, WEIGHTSFOLDER
+from paths import ROOT, OMNIGLOTFOLDER, WEIGHTSFOLDER, MINIIMAGENETFOLDER
 
 
 class Snail:
 
     def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
                  device='cuda', track_loss_freq=10, random_rotation=True):
+        assert dataset in ['omniglot','miniimagenet']
         self.t = n * k + 1
         self.n = n
         self.k = k
@@ -183,17 +184,21 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32
     :param load_weights: :bool if available load under model_weights snail and embedding network weights (default True)
     """
     assert dataset in ['omniglot', 'miniimagenet']
-    assert 'cuda' in device or device == 'cpu'
+    assert device.startswith('cuda') or device == 'cpu'
     if not torch.cuda.is_available():
         print('Warning: cuda is not available, fall back to cpu')
         device = 'cpu'
     np.random.seed(seed)
     set_seed(seed)
-    pull_data_omniglot(force_download)
-    classes = list(OMNIGLOTFOLDER.glob('*/*/'))
+    if dataset == 'omniglot':
+        pull_data_omniglot(force_download)
+        classes = list(OMNIGLOTFOLDER.glob('*/*/'))
+    else:
+        pull_data_miniimagenet(force_download)
+        classes = list(MINIIMAGENETFOLDER.glob('*/*/'))
     print(len(classes))
-    train_classes_file = ROOT / 'train_classes.txt'
-    test_classes_file = ROOT / 'test_classes.txt'
+    train_classes_file = ROOT / f'train_classes_{dataset}.txt'
+    test_classes_file = ROOT / f'test_classes_{dataset}.txt'
     train_classes, test_classes = get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize)
 
     model = Snail(n, k, dataset, device=device, track_loss=use_tensorboard,

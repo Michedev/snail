@@ -1,4 +1,5 @@
 import zipfile
+from typing import List
 
 import numpy as np
 import torch
@@ -8,14 +9,15 @@ from path import Path
 import wget
 from skimage import io, transform
 
-from paths import OMNIGLOTFOLDER
+from paths import OMNIGLOTFOLDER, MINIIMAGENETFOLDER
+
 
 def sample_batch(batch_size, train_classes, t, n, k, random_rotation=True, ohe_matrix=None):
     X = torch.zeros(batch_size, t, 28, 28, 1)
     y = torch.zeros(batch_size, t, n)
     y_last_class = torch.zeros(batch_size, dtype=torch.int64)
     if ohe_matrix is None:
-      ohe_matrix = torch.eye(n)
+        ohe_matrix = torch.eye(n)
     batch_classes = [sample(train_classes, n) for _ in range(batch_size)]
     for i_batch in range(batch_size):
         image_names_batch = []
@@ -30,7 +32,7 @@ def sample_batch(batch_size, train_classes, t, n, k, random_rotation=True, ohe_m
                 img = load_and_transform(name_image, rotation)
                 X[i_batch, i_class * k + i_img, :, :, :] = torch.from_numpy(img).unsqueeze(-1)
                 del img
-        i_last_class = randint(0, n-1)
+        i_last_class = randint(0, n - 1)
         last_class = batch_classes[i_batch][i_last_class]
         last_class_images = last_class.files()
         last_img = None
@@ -42,13 +44,35 @@ def sample_batch(batch_size, train_classes, t, n, k, random_rotation=True, ohe_m
         y_last_class[i_batch] = i_last_class
     return X, y, y_last_class
 
-def get_row(classes, k, random_rotation=True, ohe_matrix=None):
+
+def fit_task(classes: List[Path], k: int, random_rotation=True, ohe_matrix=None):
     n = len(classes)
     t = n * k + 1
     X = torch.zeros(t, 28, 28, 1)
     y = torch.zeros(t, n)
+    image_names_batch, rotations = fit_train_task(X, y, classes, k, n, ohe_matrix, random_rotation)
+    i_last_class = fit_last_image(X, classes, image_names_batch, n, rotations)
+    return X, y, i_last_class
+
+
+def fit_last_image(X, classes, image_names_batch, n, rotations):
+    i_last_class = randint(0, n - 1)
+    last_class = classes[i_last_class]
+    last_class_images = last_class.files()
+    last_img = None
+    rotation_last = rotations[i_last_class]
+    while not last_img or last_img in image_names_batch:
+        last_img = sample(last_class_images, 1)[0]
+    last_img = load_and_transform(last_img, rotation_last)
+    X[-1] = torch.from_numpy(last_img).unsqueeze(dim=-1)
+    return i_last_class
+
+
+def fit_train_task(X, y, classes, k, n, ohe_matrix, random_rotation):
     image_names_batch = []
     rotations = {}
+    if ohe_matrix is None:
+        ohe_matrix = torch.eye(n)
     for i_class, class_name in enumerate(classes):
         name_images = sample(class_name.files(), k)
         image_names_batch += name_images
@@ -59,36 +83,47 @@ def get_row(classes, k, random_rotation=True, ohe_matrix=None):
             img = load_and_transform(name_image, rotation)
             X[i_class * k + i_img, :, :, :] = torch.from_numpy(img).unsqueeze(-1)
             del img
-    i_last_class = randint(0, n-1)
-    last_class = classes[i_last_class]
-    last_class_images = last_class.files()
-    last_img = None
-    rotation_last = rotations[i_last_class]
-    while not last_img or last_img in image_names_batch:
-        last_img = sample(last_class_images, 1)[0]
-    last_img = load_and_transform(last_img, rotation_last)
-    X[-1] = torch.from_numpy(last_img).unsqueeze(dim=-1)
-    return X, y, i_last_class
+    return image_names_batch, rotations
 
 
-class OmniglotMetaLearning(torch.utils.data.Dataset):
+class MetaLearningDataset(torch.utils.data.Dataset):
 
-    def __init__(self, class_pool, n, k, random_rotation):
+    def __init__(self, class_pool, n, k, random_rotation, image_size):
         self.class_pool = class_pool
         self.n = n
         self.k = k
         self.t = n * k + 1
         self.ohe = torch.eye(n)
+        self.image_size = list(image_size)
         self.random_rotation = random_rotation
 
     def __len__(self):
         return len(self.class_pool) // self.n - 1
 
     def __getitem__(self, i):
-        return get_row(self.class_pool[i * self.n : (i+1) * self.n], self.k, random_rotation=True, ohe_matrix=self.ohe)
+        classes = self.class_pool[i * self.n: (i + 1) * self.n]
+        n = len(classes)
+        t = n * self.k + 1
+        X = torch.zeros([t] + self.image_size)
+        y = torch.zeros(t, n)
+        image_names_batch, rotations = fit_train_task(X, y, classes, self.k, n, self.ohe_matrix, random_rotation=True)
+        i_last_class = fit_last_image(X, classes, image_names_batch, n, rotations)
+        return X, y, i_last_class
 
     def shuffle(self):
         shuffle(self.class_pool)
+
+
+class OmniglotMetaLearning(MetaLearningDataset):
+
+    def __init__(self, class_pool, n, k, random_rotation):
+        super(OmniglotMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[1, 28, 28])
+
+
+class MiniImageNetMetaLearning(MetaLearningDataset):
+
+    def __init__(self, class_pool, n, k, random_rotation):
+        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[3, 84, 84])
 
 
 def load_and_transform(name_image, rotation):
@@ -136,3 +171,15 @@ def pull_data_omniglot(force):
                 char_folder.move(OMNIGLOTFOLDER)
         for folder in OMNIGLOTFOLDER.dirs('images_*'):
             folder.removedirs()
+
+
+def pull_data_miniimagenet(force):
+    test_link = 'https://doc-0g-7k-docs.googleusercontent.com/docs/securesc/d08j65cbblg4gqncserlge9deso42fjd/hfg569v72s96fttefi974p0oso41f324/1591720575000/12865399289486813135/08444651591094709174/1yKyKgxcnGMIAnA_6Vr2ilbpHMc9COg-v?e=download&authuser=0'
+    train_link = 'https://doc-0c-7k-docs.googleusercontent.com/docs/securesc/d08j65cbblg4gqncserlge9deso42fjd/lullgvimdd0tuc2his6mjlmpg9o2naf5/1591720650000/12865399289486813135/08444651591094709174/107FTosYIeBn5QbynR46YG91nHcJ70whs?e=download&authuser=0'
+    if not MINIIMAGENETFOLDER.exists():
+        MINIIMAGENETFOLDER.makedirs()
+    for zipfname, url in [('train.tar', train_link), ('test.tar', test_link)]:
+        zippath = MINIIMAGENETFOLDER / zipfname
+        wget.download(url, out=zippath)
+        with zipfile.ZipFile(zippath) as z:
+            z.extractall(MINIIMAGENETFOLDER)
