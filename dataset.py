@@ -106,7 +106,7 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         t = n * self.k + 1
         X = torch.zeros([t] + self.image_size)
         y = torch.zeros(t, n)
-        image_names_batch, rotations = fit_train_task(X, y, classes, self.k, n, self.ohe_matrix, random_rotation=True)
+        image_names_batch, rotations = fit_train_task(X, y, classes, self.k, n, self.ohe, random_rotation=True)
         i_last_class = fit_last_image(X, classes, image_names_batch, n, rotations)
         return X, y, i_last_class
 
