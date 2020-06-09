@@ -69,7 +69,7 @@ class ResidualBlockImageNet(Module):
         self.layers = Sequential()
         for i in range(num_convs):
             block = Sequential(
-                Conv2d(in_filters if i == 0 else out_filters, out_filters, kernel_size=3, padding='same'),
+                Conv2d(in_filters if i == 0 else out_filters, out_filters, kernel_size=3, padding=1),
                 BatchNorm2d(out_filters),
                 LeakyReLU(0.1))
             self.layers.add_module(f'residual_block_{i}', block)
