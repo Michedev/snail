@@ -5,7 +5,8 @@ from torch.utils.tensorboard import SummaryWriter
 from multiprocessing import cpu_count
 from torch.utils.data import DataLoader, RandomSampler
 
-from dataset import OmniglotMetaLearning, get_train_test_classes, pull_data_omniglot, pull_data_miniimagenet
+from dataset import OmniglotMetaLearning, get_train_test_classes, pull_data_omniglot, pull_data_miniimagenet, \
+    MiniImageNetMetaLearning
 from models import build_embedding_network_miniimagenet, build_embedding_network_omniglot, build_snail_miniimagenet, \
     build_snail_omniglot
 from fire import Fire
@@ -50,12 +51,14 @@ class Snail:
     def train(self, epochs: int, batch_size: int, train_classes, test_classes=None):
         self.embedding_network.train()
         self.model.train()
-        train_data = OmniglotMetaLearning(train_classes, self.n, self.k, self.random_rotation)
+        train_data = OmniglotMetaLearning(train_classes, self.n, self.k, self.random_rotation) if self.is_omniglot else\
+                 MiniImageNetMetaLearning(train_classes, self.n, self.k, self.random_rotation)
         data_loader = DataLoader(train_data, batch_size=batch_size,
                                  shuffle=True, num_workers=cpu_count(),
                                  drop_last=True)
         if test_classes:
-            test_data = OmniglotMetaLearning(test_classes, self.n, self.k, self.random_rotation)
+            test_data = OmniglotMetaLearning(train_classes, self.n, self.k, self.random_rotation) if self.is_omniglot else\
+                    MiniImageNetMetaLearning(train_classes, self.n, self.k, self.random_rotation)
             test_loader = DataLoader(test_data, sampler=RandomSampler(test_data, replacement=True),
                                      batch_size=batch_size)
             test_data.shuffle()

@@ -117,13 +117,13 @@ class MetaLearningDataset(torch.utils.data.Dataset):
 class OmniglotMetaLearning(MetaLearningDataset):
 
     def __init__(self, class_pool, n, k, random_rotation):
-        super(OmniglotMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[1, 28, 28])
+        super(OmniglotMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[28, 28, 1])
 
 
 class MiniImageNetMetaLearning(MetaLearningDataset):
 
     def __init__(self, class_pool, n, k, random_rotation):
-        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[3, 84, 84])
+        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[84, 84, 3])
 
 
 def load_and_transform(name_image, rotation):
