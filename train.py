@@ -11,7 +11,7 @@ from snail import Snail
 
 def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32, random_rotation=True,
          seed=13, force_download=False, device='cuda', use_tensorboard=True,
-         eval_test=True, track_loss_freq=10, load_weights=True):
+         eval_test=True, track_loss_freq=1, log_weights=True, track_weights_freq=100, load_weights=True):
     """
     Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
     When training is successfully finished, the embedding network weights and snail weights are saved, as well
@@ -28,7 +28,9 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32
     :param device: : device used in pytorch for training, can be "cuda*" or "cpu" (default 'cuda')
     :param use_tensorboard: :bool save metrics in tensorboard (default True)
     :param eval_test: :bool after test_loss_freq batch calculate loss and accuracy on test set (default True)
-    :param track_loss_freq: :int step frequency of loss/accuracy save into tensorboard (default 10)
+    :param track_loss_freq: :int epoch frequency of loss/accuracy saving inside tensorboard (default 1)
+    :param log_weights=True: :bool when True log parameters histogram inside tensorboard (default True)
+    :param track_weights_freq: :int steps frequency of saving parameters and gradients histograms inside tensorboard (default 100)
     :param load_weights: :bool if available load under model_weights snail and embedding network weights (default True)
     """
     assert dataset in ['omniglot', 'miniimagenet']
@@ -49,8 +51,8 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32
         train_classes = (MINIIMAGENETFOLDER / 'train').dirs()
         test_classes = (MINIIMAGENETFOLDER / 'test').dirs()
     model = Snail(n, k, dataset, device=device, track_loss=use_tensorboard,
-                  track_layers=use_tensorboard,
-                  track_loss_freq=track_loss_freq, random_rotation=random_rotation)
+                  track_layers=log_weights, track_loss_freq=track_loss_freq,
+                  track_params_freq=track_weights_freq, random_rotation=random_rotation)
     if load_weights:
         model.load_if_exists()
     model.train(epochs, batch_size, train_classes, None if not eval_test else test_classes)
