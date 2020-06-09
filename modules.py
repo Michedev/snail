@@ -99,5 +99,11 @@ def ConvBlockOmniglot(in_filters: int, out_filters: int):
 
 
 class Flatten(Module):
+
+    def __init__(self, start_dim=1, end_dim=-1):
+        super().__init__()
+        self.start_dim = start_dim
+        self.end_dim = end_dim
+
     def forward(self, input):
-        return input.view(input.size(0), -1)
+        return torch.flatten(input, self.start_dim, self.end_dim)
