@@ -10,6 +10,7 @@ import wget
 from skimage import io, transform
 from torchvision.datasets.utils import download_file_from_google_drive
 
+import os
 from paths import OMNIGLOTFOLDER, MINIIMAGENETFOLDER
 
 
@@ -186,6 +187,5 @@ def pull_data_miniimagenet(force):
             download_file_from_google_drive(url, MINIIMAGENETFOLDER, zipfname)
             if dstfolder.exists() and force:
                 dstfolder.removedirs()
-            with zipfile.ZipFile(zippath) as z:
-                z.extractall(MINIIMAGENETFOLDER)
+            os.system(f'tar -xvf {MINIIMAGENETFOLDER}')
             zippath.remove()
