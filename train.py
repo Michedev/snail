@@ -171,7 +171,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32
     :param dataset: Dataset used for training,  can be only {'omniglot', 'miniimagenet'} (defuult 'omniglot')
     :param n: the N in N-way in meta-learning i.e. number of class sampled in each row of the dataset (default 5)
     :param k: the K in K-shot in meta-learning i.e. number of observations for each class (default 5)
-    :param trainsize: number of class used in training (default 1200) (the remaining classes are for test)
+    :param trainsize: [omniglot-only] number of class used in training (default 1200) while the remaining classes are for test.
     :param epochs: times that model see the dataset (default 200)
     :param batch_size: size of a training batch (default 32)
     :param random_rotation: :bool rotate the class images by multiples of 90 degrees (default True)
@@ -193,14 +193,13 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, epochs=200, batch_size=32
     if dataset == 'omniglot':
         pull_data_omniglot(force_download)
         classes = list(OMNIGLOTFOLDER.glob('*/*/'))
+        train_classes_file = ROOT / f'train_classes_{dataset}.txt'
+        test_classes_file = ROOT / f'test_classes_{dataset}.txt'
+        train_classes, test_classes = get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize)
     else:
         pull_data_miniimagenet(force_download)
-        classes = list(MINIIMAGENETFOLDER.glob('*/*/'))
-    print(len(classes))
-    train_classes_file = ROOT / f'train_classes_{dataset}.txt'
-    test_classes_file = ROOT / f'test_classes_{dataset}.txt'
-    train_classes, test_classes = get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize)
-
+        train_classes = (MINIIMAGENETFOLDER / 'train').dirs()
+        test_classes = (MINIIMAGENETFOLDER / 'test').dirs()
     model = Snail(n, k, dataset, device=device, track_loss=use_tensorboard,
                   track_layers=use_tensorboard,
                   track_loss_freq=track_loss_freq, random_rotation=random_rotation)
