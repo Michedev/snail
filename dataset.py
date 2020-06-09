@@ -91,7 +91,7 @@ def fit_train_task(X, y, classes, k, n, ohe_matrix, random_rotation):
                 img = img.unsqueeze(-1)
             X[i_class * k + i_img, :, :, :] = img
             del img
-    return image_names_batch, rotations
+    return image_names_batch, rotations, X, y
 
 
 class MetaLearningDataset(torch.utils.data.Dataset):
@@ -109,13 +109,13 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         return len(self.class_pool) // self.n - 1
 
     def __getitem__(self, i):
-        classes = self.class_pool[i * self.n: (i + 1) * self.n]
-        n = len(classes)
+        sampled_classes = self.class_pool[i * self.n: (i + 1) * self.n]
+        n = len(sampled_classes)
         t = n * self.k + 1
         X = torch.zeros([t] + self.image_size)
         y = torch.zeros(t, n)
-        image_names_batch, rotations = fit_train_task(X, y, classes, self.k, n, self.ohe, random_rotation=True)
-        i_last_class = fit_last_image(X, classes, image_names_batch, n, rotations)
+        image_names_batch, rotations, X, y = fit_train_task(X, y, sampled_classes, self.k, n, self.ohe, random_rotation=True)
+        i_last_class = fit_last_image(X, sampled_classes, image_names_batch, n, rotations)
         return X, y, i_last_class
 
     def shuffle(self):
