@@ -8,6 +8,7 @@ from random import sample, randint, shuffle
 from path import Path
 import wget
 from skimage import io, transform
+from torchvision.datasets.utils import download_file_from_google_drive
 
 from paths import OMNIGLOTFOLDER, MINIIMAGENETFOLDER
 
@@ -39,7 +40,7 @@ def sample_batch(batch_size, train_classes, t, n, k, random_rotation=True, ohe_m
         rotation_last = rotations[i_last_class]
         while not last_img or last_img in image_names_batch:
             last_img = sample(last_class_images, 1)[0]
-        last_img = load_and_transform(last_img, rotation_last)
+        last_img = load_and_transform(last_img, rotation_last, X.shape[1:-1])
         X[i_batch, -1] = torch.from_numpy(last_img).unsqueeze(dim=-1)
         y_last_class[i_batch] = i_last_class
     return X, y, y_last_class
@@ -63,7 +64,7 @@ def fit_last_image(X, classes, image_names_batch, n, rotations):
     rotation_last = rotations[i_last_class]
     while not last_img or last_img in image_names_batch:
         last_img = sample(last_class_images, 1)[0]
-    last_img = load_and_transform(last_img, rotation_last)
+    last_img = load_and_transform(last_img, rotation_last, X.shape[1:-1])
     X[-1] = torch.from_numpy(last_img).unsqueeze(dim=-1)
     return i_last_class
 
@@ -80,7 +81,7 @@ def fit_train_task(X, y, classes, k, n, ohe_matrix, random_rotation):
         rotation = 0 if not random_rotation else 90 * randint(0, 3)
         rotations[i_class] = rotation
         for i_img, name_image in enumerate(name_images):
-            img = load_and_transform(name_image, rotation)
+            img = load_and_transform(name_image, rotation, X.shape[1:-1])
             X[i_class * k + i_img, :, :, :] = torch.from_numpy(img).unsqueeze(-1)
             del img
     return image_names_batch, rotations
@@ -126,9 +127,9 @@ class MiniImageNetMetaLearning(MetaLearningDataset):
         super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[84, 84, 3])
 
 
-def load_and_transform(name_image, rotation):
+def load_and_transform(name_image, rotation, image_size):
     img = io.imread(name_image, as_gray=True)
-    img = transform.resize(img, (28, 28))
+    img = transform.resize(img, image_size)
     img = transform.rotate(img, rotation)
     return img
 
@@ -174,15 +175,15 @@ def pull_data_omniglot(force):
 
 
 def pull_data_miniimagenet(force):
-    test_link = 'https://doc-0g-7k-docs.googleusercontent.com/docs/securesc/d08j65cbblg4gqncserlge9deso42fjd/hfg569v72s96fttefi974p0oso41f324/1591720575000/12865399289486813135/08444651591094709174/1yKyKgxcnGMIAnA_6Vr2ilbpHMc9COg-v?e=download&authuser=0'
-    train_link = 'https://doc-0c-7k-docs.googleusercontent.com/docs/securesc/d08j65cbblg4gqncserlge9deso42fjd/lullgvimdd0tuc2his6mjlmpg9o2naf5/1591720650000/12865399289486813135/08444651591094709174/107FTosYIeBn5QbynR46YG91nHcJ70whs?e=download&authuser=0'
+    test_id = '1yKyKgxcnGMIAnA_6Vr2ilbpHMc9COg-v'
+    train_id = '107FTosYIeBn5QbynR46YG91nHcJ70whs'
     if not MINIIMAGENETFOLDER.exists():
         MINIIMAGENETFOLDER.makedirs()
-    for zipfname, url in [('train.tar', train_link), ('test.tar', test_link)]:
+    for zipfname, url in [('train.tar', train_id), ('test.tar', test_id)]:
         zippath = MINIIMAGENETFOLDER / zipfname
         dstfolder = MINIIMAGENETFOLDER / zipfname.split('.')[0]
         if not dstfolder.exists() or force:
-            wget.download(url, out=zippath)
+            download_file_from_google_drive(url, MINIIMAGENETFOLDER, zipfname)
             if dstfolder.exists() and force:
                 dstfolder.removedirs()
             with zipfile.ZipFile(zippath) as z:
