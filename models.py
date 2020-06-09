@@ -25,6 +25,7 @@ def build_embedding_network_miniimagenet():
 def build_snail(in_filters, n, t):
     log2_t = int(ceil(log2(t)))
     model = Sequential()
+    softmax = Softmax(dim=1)
     filters = in_filters + n
     model.add_module('attn1', AttentionBlock(filters, 64, 32))  # n x t x 96
     filters += 32
@@ -37,6 +38,7 @@ def build_snail(in_filters, n, t):
     model.add_module('attn3', AttentionBlock(filters, 512, 256))  # n x t x 2016
     filters += 256
     model.add_module('conv1x1', Conv1d(filters, n, kernel_size=1))
+    model.add_module('softmax', softmax)
     return model
 
 
