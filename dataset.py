@@ -31,7 +31,7 @@ def sample_batch(batch_size, train_classes, t, n, k, random_rotation=True, ohe_m
             rotation = 0 if not random_rotation else 90 * randint(0, 3)
             rotations[i_class] = rotation
             for i_img, name_image in enumerate(name_images):
-                img = load_and_transform(name_image, rotation)
+                img = load_and_transform(name_image, rotation, X.shape[1:])
                 X[i_batch, i_class * k + i_img, :, :, :] = torch.from_numpy(img).unsqueeze(-1)
                 del img
         i_last_class = randint(0, n - 1)
@@ -41,7 +41,7 @@ def sample_batch(batch_size, train_classes, t, n, k, random_rotation=True, ohe_m
         rotation_last = rotations[i_last_class]
         while not last_img or last_img in image_names_batch:
             last_img = sample(last_class_images, 1)[0]
-        last_img = load_and_transform(last_img, rotation_last, X.shape[1:-1])
+        last_img = load_and_transform(last_img, rotation_last, X.shape[1:])
         X[i_batch, -1] = torch.from_numpy(last_img).unsqueeze(dim=-1)
         y_last_class[i_batch] = i_last_class
     return X, y, y_last_class
@@ -65,7 +65,7 @@ def fit_last_image(X, classes, image_names_batch, n, rotations):
     rotation_last = rotations[i_last_class]
     while not last_img or last_img in image_names_batch:
         last_img = sample(last_class_images, 1)[0]
-    last_img = load_and_transform(last_img, rotation_last, X.shape[1:-1])
+    last_img = load_and_transform(last_img, rotation_last, X.shape[1:])
     X[-1] = torch.from_numpy(last_img).unsqueeze(dim=-1)
     return i_last_class
 
@@ -82,7 +82,7 @@ def fit_train_task(X, y, classes, k, n, ohe_matrix, random_rotation):
         rotation = 0 if not random_rotation else 90 * randint(0, 3)
         rotations[i_class] = rotation
         for i_img, name_image in enumerate(name_images):
-            img = load_and_transform(name_image, rotation, X.shape[1:-1])
+            img = load_and_transform(name_image, rotation, X.shape[1:])
             X[i_class * k + i_img, :, :, :] = torch.from_numpy(img).unsqueeze(-1)
             del img
     return image_names_batch, rotations
@@ -129,8 +129,9 @@ class MiniImageNetMetaLearning(MetaLearningDataset):
 
 
 def load_and_transform(name_image, rotation, image_size):
-    img = io.imread(name_image, as_gray=True)
-    img = transform.resize(img, image_size)
+    assert len(image_size) == 3
+    img = io.imread(name_image, as_gray=image_size[-1] == 1)
+    img = transform.resize(img, image_size[:-1])
     img = transform.rotate(img, rotation)
     return img
 
