@@ -53,12 +53,12 @@ class Snail:
                                   shuffle=True, num_workers=cpu_count(),
                                   drop_last=True)
         if test_classes:
-            test_data = OmniglotMetaLearning(test_classes, self.n, self.k,
-                                             self.random_rotation) if self.is_omniglot else \
-                MiniImageNetMetaLearning(test_classes, self.n, self.k, self.random_rotation)
+            test_data = OmniglotMetaLearning(test_classes, self.n, self.k, self.random_rotation) \
+                        if self.is_omniglot else \
+                        MiniImageNetMetaLearning(test_classes, self.n, self.k, self.random_rotation)
             test_data.shuffle()
             test_loader = DataLoader(test_data, shuffle=True, num_workers=cpu_count(),
-                                     batch_size=batch_size, drop_last=True)
+                                     batch_size=2, drop_last=True)
         train_engine = Engine(lambda engine, batch: self.opt_step(*batch, return_accuracy=False))
 
         @train_engine.on(Events.EPOCH_COMPLETED(every=self.track_loss_freq))
