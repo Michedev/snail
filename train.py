@@ -9,7 +9,7 @@ from paths import ROOT, OMNIGLOTFOLDER, MINIIMAGENETFOLDER
 from snail import Snail
 
 
-def main(dataset='omniglot', n=5, k=5, trainsize=1200, testsize=300, epochs=200, batch_size=32, random_rotation=True,
+def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200, batch_size=32, random_rotation=True,
          seed=13, force_download=False, device='cuda', use_tensorboard=True,
          eval_test=True, track_loss_freq=1, log_weights=True, track_weights_freq=100, load_weights=True):
     """
@@ -57,7 +57,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=1200, testsize=300, epochs=200,
                   track_params_freq=track_weights_freq, random_rotation=random_rotation)
     if load_weights:
         model.load_if_exists()
-    model.train(epochs, batch_size, train_classes, None if not eval_test else test_classes)
+    model.train(epochs, batch_size, train_classes, None if not eval_test else test_classes, trainsize, testsize)
     model.save_weights()
     with open('train_classes.txt', 'w') as f:
         f.write(', '.join(train_classes))
