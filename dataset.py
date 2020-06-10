@@ -96,7 +96,7 @@ def fit_train_task(X, y, classes, k, n, ohe_matrix, random_rotation):
 
 class MetaLearningDataset(torch.utils.data.Dataset):
 
-    def __init__(self, class_pool, n, k, random_rotation, image_size):
+    def __init__(self, class_pool, n, k, random_rotation, image_size, length=None):
         self.class_pool = class_pool
         self.n = n
         self.k = k
@@ -104,12 +104,13 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         self.ohe = torch.eye(n)
         self.image_size = list(image_size)
         self.random_rotation = random_rotation
+        self.length = length
 
     def __len__(self):
-        return len(self.class_pool) // self.n - 1
+        return len(self.class_pool) // self.n - 1 if self.length is None else self.length
 
     def __getitem__(self, i):
-        sampled_classes = self.class_pool[i * self.n: (i + 1) * self.n]
+        sampled_classes = sample(self.class_pool, self.n)
         n = len(sampled_classes)
         t = n * self.k + 1
         X = torch.zeros([t] + self.image_size)
@@ -124,14 +125,14 @@ class MetaLearningDataset(torch.utils.data.Dataset):
 
 class OmniglotMetaLearning(MetaLearningDataset):
 
-    def __init__(self, class_pool, n, k, random_rotation):
-        super(OmniglotMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[28, 28, 1])
+    def __init__(self, class_pool, n, k, random_rotation, size):
+        super(OmniglotMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[28, 28, 1], length=size)
 
 
 class MiniImageNetMetaLearning(MetaLearningDataset):
 
-    def __init__(self, class_pool, n, k, random_rotation):
-        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[84, 84, 3])
+    def __init__(self, class_pool, n, k, random_rotation, size):
+        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[84, 84, 3], length=size)
 
 
 def load_and_transform(name_image, rotation, image_size):

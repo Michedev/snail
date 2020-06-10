@@ -44,18 +44,18 @@ class Snail:
         self.track_loss_freq = track_loss_freq
         self.track_params_freq = track_params_freq
 
-    def train(self, epochs: int, batch_size: int, train_classes, test_classes=None):
+    def train(self, epochs: int, batch_size: int, train_classes, test_classes=None, trainsize=None, testsize=None):
         self.embedding_network.train()
         self.model.train()
-        train_data = OmniglotMetaLearning(train_classes, self.n, self.k, self.random_rotation) if self.is_omniglot else \
-            MiniImageNetMetaLearning(train_classes, self.n, self.k, self.random_rotation)
+        train_data = OmniglotMetaLearning(train_classes, self.n, self.k, self.random_rotation, trainsize) if self.is_omniglot else \
+            MiniImageNetMetaLearning(train_classes, self.n, self.k, self.random_rotation, trainsize)
         train_loader = DataLoader(train_data, batch_size=batch_size,
                                   shuffle=True, num_workers=cpu_count(),
-                                  drop_last=True, sampler=RandomSampler(train_data, replacement=True))
+                                  drop_last=True)
         if test_classes:
-            test_data = OmniglotMetaLearning(test_classes, self.n, self.k, self.random_rotation) \
+            test_data = OmniglotMetaLearning(test_classes, self.n, self.k, self.random_rotation, testsize) \
                         if self.is_omniglot else \
-                        MiniImageNetMetaLearning(test_classes, self.n, self.k, self.random_rotation)
+                        MiniImageNetMetaLearning(test_classes, self.n, self.k, self.random_rotation, testsize)
             test_data.shuffle()
             test_loader = DataLoader(test_data, shuffle=True, num_workers=cpu_count(),
                                      batch_size=batch_size, drop_last=True, sampler=RandomSampler(test_data, replacement=True))
