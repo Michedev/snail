@@ -50,19 +50,6 @@ def build_snail_miniimagenet(n, t):
     return build_snail(384, n, t)
 
 
-def build_embedding_snail(n: int, k: int, dataset: str):
-    assert dataset in ['omniglot', 'miniimagenet']
-    t = n * k + 1
-    embedding_network = None
-    snail = None
-    if dataset == 'omniglot':
-        embedding_network = build_embedding_network_omniglot()
-        snail = build_snail_omniglot(n, t)
-    else:
-        snail = build_snail_miniimagenet(n, t)
-        embedding_network = build_embedding_network_miniimagenet()
-    return Sequential(embedding_network, snail)
-
 class Snail(Module):
 
     def __init__(self, n: int, k: int, dataset: str):

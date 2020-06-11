@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 
 from dataset import OmniglotMetaLearning, MiniImageNetMetaLearning
-from models import build_embedding_snail, Snail
+from models import Snail
 from paths import WEIGHTSFOLDER
 
 
@@ -149,15 +149,10 @@ class SnailTrain:
         return WEIGHTSFOLDER / self.snail_fname
 
     def load_if_exists(self):
-        if self.embedding_network_path.exists():
-            self.embedding_network.load_state_dict(torch.load(self.embedding_network_path))
         if self.snail_path.exists():
             self.model.load_state_dict(torch.load(self.snail_path))
 
     def save_weights(self):
-        self.embedding_network.eval()
         self.model.eval()
-        torch.save(self.embedding_network.state_dict(),
-                   WEIGHTSFOLDER / self.embedding_network_fname)
         torch.save(self.model.state_dict(),
                    WEIGHTSFOLDER / self.snail_fname)
