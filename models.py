@@ -65,6 +65,7 @@ class Snail(Module):
             self.snail = build_snail_miniimagenet(n, t)
             self.embedding_network = build_embedding_network_miniimagenet()
         self.dataset = dataset
+        self.t = t
 
     def forward(self, X, y):
         batch_size = X.shape[0]
