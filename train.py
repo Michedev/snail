@@ -11,7 +11,8 @@ from snailtrain import SnailTrain
 
 def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200, batch_size=32, random_rotation=True,
          seed=13, force_download=False, device='cuda', use_tensorboard=True,
-         eval_test=True, track_loss_freq=1, track_weights=True, track_weights_freq=100, load_weights=True):
+         eval_test=True, track_loss_freq=1, track_weights=True,
+         track_weights_freq=100, load_weights=True):
     """
     Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
     When training is successfully finished, the embedding network weights and snail weights are saved, as well

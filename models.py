@@ -80,4 +80,4 @@ class Snail(Module):
 
 
 __all__ = ['build_snail_miniimagenet', 'build_embedding_network_miniimagenet',
-           'build_snail_omniglot', 'build_embedding_network_omniglot', 'build_snail', 'predict']
+           'build_snail_omniglot', 'build_embedding_network_omniglot', 'build_snail']
