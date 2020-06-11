@@ -28,6 +28,7 @@ class SnailTrain:
         self.is_miniimagenet = dataset == 'miniimagenet'
         self.ohe_matrix = torch.eye(n)
         self.model = Snail(n, k, dataset)
+        self.model = self.model.to(self.device)
         self.opt = torch.optim.Adam(self.model.parameters(), lr=0.0003)
         self.loss = CrossEntropyLoss()
         self.track_layers = track_layers
