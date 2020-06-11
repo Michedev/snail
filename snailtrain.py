@@ -6,14 +6,15 @@ from ignite.engine import Engine, Events
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader, RandomSampler
 from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
 
 from dataset import OmniglotMetaLearning, MiniImageNetMetaLearning
-from models import build_embedding_network_omniglot, build_snail_omniglot, build_snail_miniimagenet, \
-    build_embedding_network_miniimagenet
+from models import build_embedding_snail, Snail
 from paths import WEIGHTSFOLDER
 
 
-class Snail:
+
+class SnailTrain:
 
     def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
                  device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True):
@@ -26,26 +27,18 @@ class Snail:
         self.is_omniglot = dataset == 'omniglot'
         self.is_miniimagenet = dataset == 'miniimagenet'
         self.ohe_matrix = torch.eye(n)
-        if self.is_omniglot:
-            self.embedding_network = build_embedding_network_omniglot()
-            self.model = build_snail_omniglot(n, self.t)
-        elif self.is_miniimagenet:
-            self.model = build_snail_miniimagenet(n, self.t)
-            self.embedding_network = build_embedding_network_miniimagenet()
-        self.embedding_network.to(self.device)
-        self.model.to(self.device)
-        self.opt = torch.optim.Adam(chain(self.embedding_network.parameters(), self.model.parameters()), lr=0.0003)
+        self.model = Snail(n, k, dataset)
+        self.opt = torch.optim.Adam(self.model.parameters(), lr=0.0003)
         self.loss = CrossEntropyLoss()
         self.track_layers = track_layers
         self.track_loss = track_loss
-        self.logger = SummaryWriter('log_' + dataset) if self.track_layers or self.track_loss else None
+        self.logger = SummaryWriter('tb/log_' + dataset + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")) if self.track_layers or self.track_loss else None
         self.freq_track_layers = freq_track_layers
         self.random_rotation = random_rotation
         self.track_loss_freq = track_loss_freq
         self.track_params_freq = track_params_freq
 
     def train(self, epochs: int, batch_size: int, train_classes, test_classes=None, trainsize=None, testsize=None):
-        self.embedding_network.train()
         self.model.train()
         train_data = OmniglotMetaLearning(train_classes, self.n, self.k, self.random_rotation, trainsize) if self.is_omniglot else \
             MiniImageNetMetaLearning(train_classes, self.n, self.k, self.random_rotation, trainsize)
@@ -71,7 +64,6 @@ class Snail:
         @train_engine.on(Events.EPOCH_COMPLETED)
         def save_weights(engine):
             torch.save(self.model.state_dict(), self.snail_path)
-            torch.save(self.embedding_network.state_dict(), self.embedding_network_path)
 
         @train_engine.on(Events.ITERATION_COMPLETED(every=self.track_params_freq))
         def tb_log_histogram_params(engine):
@@ -120,7 +112,7 @@ class Snail:
         for tensor in [X, y, y_last]:
             tensor.squeeze_(dim=0)
         with torch.set_grad_enabled(grad):
-            yhat = self.predict(X, y)
+            yhat = self.model(X, y)
             p_yhat_last = yhat[:, :, -1]
             loss_value = self.loss(p_yhat_last, y_last)
         if not also_accuracy:
@@ -139,16 +131,6 @@ class Snail:
         if return_accuracy:
             return accuracy
 
-    def predict(self, X, y):
-        batch_size = X.shape[0]
-        y = y.permute(0, 2, 1)
-        self.opt.zero_grad()
-        X = X.reshape(X.size(0) * X.size(1), X.size(4), X.size(2), X.size(3))
-        X_embedding = self.embedding_network(X)
-        X_embedding = X_embedding.reshape(batch_size, X_embedding.size(1), self.t)
-        X_embedding = torch.cat([X_embedding, y], dim=1)
-        yhat = self.model(X_embedding)
-        return yhat
 
     @property
     def embedding_network_fname(self):

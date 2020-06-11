@@ -6,12 +6,12 @@ from random import seed as set_seed
 import torch
 
 from paths import ROOT, OMNIGLOTFOLDER, MINIIMAGENETFOLDER
-from snail import Snail
+from snailtrain import SnailTrain
 
 
 def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200, batch_size=32, random_rotation=True,
          seed=13, force_download=False, device='cuda', use_tensorboard=True,
-         eval_test=True, track_loss_freq=1, log_weights=True, track_weights_freq=100, load_weights=True):
+         eval_test=True, track_loss_freq=1, track_weights=True, track_weights_freq=100, load_weights=True):
     """
     Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
     When training is successfully finished, the embedding network weights and snail weights are saved, as well
@@ -29,7 +29,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200
     :param use_tensorboard: :bool save metrics in tensorboard (default True)
     :param eval_test: :bool after test_loss_freq batch calculate loss and accuracy on test set (default True)
     :param track_loss_freq: :int epoch frequency of loss/accuracy saving inside tensorboard (default 1)
-    :param log_weights=True: :bool when True log parameters histogram inside tensorboard (default True)
+    :param track_weights: :bool when True log parameters histogram inside tensorboard (default True)
     :param track_weights_freq: :int steps frequency of saving parameters and gradients histograms inside tensorboard (default 100)
     :param load_weights: :bool if available load under model_weights snail and embedding network weights (default True)
     """
@@ -52,9 +52,9 @@ def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200
         test_classes = (MINIIMAGENETFOLDER / 'test').dirs()
     print('train classes', len(train_classes))
     print('test classes', len(test_classes))
-    model = Snail(n, k, dataset, device=device, track_loss=use_tensorboard,
-                  track_layers=log_weights and use_tensorboard, track_loss_freq=track_loss_freq,
-                  track_params_freq=track_weights_freq, random_rotation=random_rotation)
+    model = SnailTrain(n, k, dataset, device=device, track_loss=use_tensorboard,
+                       track_layers=track_weights and use_tensorboard, track_loss_freq=track_loss_freq,
+                       track_params_freq=track_weights_freq, random_rotation=random_rotation)
     if load_weights:
         model.load_if_exists()
     model.train(epochs, batch_size, train_classes, None if not eval_test else test_classes, trainsize, testsize)

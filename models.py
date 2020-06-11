@@ -50,15 +50,45 @@ def build_snail_miniimagenet(n, t):
     return build_snail(384, n, t)
 
 
-def predict(embedding_network, snail, X, y):
-    batch_size, t = X.shape[0], X.shape[1]
-    y = y.permute(0, 2, 1)
-    X = X.reshape(X.size(0) * X.size(1), X.size(4), X.size(2), X.size(3))
-    X_embedding = embedding_network(X)
-    X_embedding = X_embedding.reshape(batch_size, X_embedding.size(1), t)
-    X_embedding = torch.cat([X_embedding, y], dim=1)
-    yhat = snail(X_embedding)
-    return yhat
+def build_embedding_snail(n: int, k: int, dataset: str):
+    assert dataset in ['omniglot', 'miniimagenet']
+    t = n * k + 1
+    embedding_network = None
+    snail = None
+    if dataset == 'omniglot':
+        embedding_network = build_embedding_network_omniglot()
+        snail = build_snail_omniglot(n, t)
+    else:
+        snail = build_snail_miniimagenet(n, t)
+        embedding_network = build_embedding_network_miniimagenet()
+    return Sequential(embedding_network, snail)
+
+class Snail(Module):
+
+    def __init__(self, n: int, k: int, dataset: str):
+        super(Snail, self).__init__()
+        assert dataset in ['omniglot', 'miniimagenet']
+        t = n * k + 1
+        self.embedding_network = None
+        self.snail = None
+        if dataset == 'omniglot':
+            self.embedding_network = build_embedding_network_omniglot()
+            self.snail = build_snail_omniglot(n, t)
+        else:
+            self.snail = build_snail_miniimagenet(n, t)
+            self.embedding_network = build_embedding_network_miniimagenet()
+        self.dataset = dataset
+
+    def forward(self, X, y):
+        batch_size = X.shape[0]
+        y = y.permute(0, 2, 1)
+        X = X.reshape(X.size(0) * X.size(1), X.size(4), X.size(2), X.size(3))
+        X_embedding = self.embedding_network(X)
+        X_embedding = X_embedding.reshape(batch_size, X_embedding.size(1), self.t)
+        X_embedding = torch.cat([X_embedding, y], dim=1)
+        yhat = self.snail(X_embedding)
+        return yhat
+
 
 
 __all__ = ['build_snail_miniimagenet', 'build_embedding_network_miniimagenet',
