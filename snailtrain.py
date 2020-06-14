@@ -162,7 +162,7 @@ class SnailTrain:
     def load_if_exists(self):
         if self.snail_path.exists():
             self.model.load_state_dict(torch.load(self.snail_path, map_location=self.device))
-        if self.snail_opt_fname.exists():
+        if self.snail_opt_path.exists():
             self.opt.load_state_dict(torch.load(self.snail_opt_path, map_location=self.device))
 
     def save_weights(self):
