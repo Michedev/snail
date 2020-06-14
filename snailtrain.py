@@ -63,8 +63,9 @@ class SnailTrain:
                     self.tb_log(test_loader, self.logger, engine.state.epoch, is_train=False)
 
         @train_engine.on(Events.EPOCH_COMPLETED)
-        def save_weights(engine):
+        def save_state(engine):
             torch.save(self.model.state_dict(), self.snail_path)
+            torch.save(self.opt.state_dict(), self.snail_opt_path)
 
         @train_engine.on(Events.ITERATION_COMPLETED(every=self.track_params_freq))
         def tb_log_histogram_params(engine):
@@ -146,12 +147,23 @@ class SnailTrain:
         return f'snail_{self.dataset}_{self.n}_{self.k}.pth'
 
     @property
+    def snail_opt_fname(self):
+        return f'snail_opt_{self.dataset}_{self.n}_{self.k}.pth'
+
+    @property
+    def snail_opt_path(self):
+        return WEIGHTSFOLDER / self.snail_opt_fname
+
+
+    @property
     def snail_path(self):
         return WEIGHTSFOLDER / self.snail_fname
 
     def load_if_exists(self):
         if self.snail_path.exists():
-            self.model.load_state_dict(torch.load(self.snail_path))
+            self.model.load_state_dict(torch.load(self.snail_path, map_location=self.device))
+        if self.snail_opt_fname.exists():
+            self.opt.load_state_dict(torch.load(self.snail_opt_path, map_location=self.device))
 
     def save_weights(self):
         self.model.eval()
