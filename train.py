@@ -9,10 +9,10 @@ from paths import ROOT, OMNIGLOTFOLDER, MINIIMAGENETFOLDER
 from snailtrain import SnailTrain
 
 
-def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200, batch_size=32, random_rotation=True,
-         seed=13, force_download=False, device='cuda', use_tensorboard=True,
-         eval_test=True, track_loss_freq=1, track_weights=True,
-         track_weights_freq=100, load_weights=True):
+def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200, batch_size=32, lr=10e-4,
+         random_rotation=True, seed=13, force_download=False, device='cuda', 
+         use_tensorboard=True, eval_test=True, track_loss_freq=1,
+         track_weights=True, track_weights_freq=100, load_weights=True):
     """
     Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
     When training is successfully finished, the embedding network weights and snail weights are saved, as well
@@ -55,11 +55,12 @@ def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200
     print('test classes', len(test_classes))
     model = SnailTrain(n, k, dataset, device=device, track_loss=use_tensorboard,
                        track_layers=track_weights and use_tensorboard, track_loss_freq=track_loss_freq,
-                       track_params_freq=track_weights_freq, random_rotation=random_rotation)
+                       track_params_freq=track_weights_freq, random_rotation=random_rotation, lr=lr)
     if load_weights:
         model.load_if_exists()
-    model.train(epochs, batch_size, train_classes, None if not eval_test else test_classes, trainsize, testsize)
-    model.save_weights()
+    test_classes = None if not eval_test else test_classes
+    model.train(epochs, batch_size, train_classes,
+                test_classes, trainsize, testsize)
     with open('train_classes.txt', 'w') as f:
         f.write(', '.join(train_classes))
     with open('test_classes.txt', 'w') as f:

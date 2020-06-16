@@ -17,7 +17,7 @@ from paths import WEIGHTSFOLDER
 class SnailTrain:
 
     def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
-                 device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True):
+                 device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True, lr=10e-4):
         assert dataset in ['omniglot', 'miniimagenet']
         self.t = n * k + 1
         self.n = n
@@ -29,7 +29,7 @@ class SnailTrain:
         self.ohe_matrix = torch.eye(n)
         self.model = Snail(n, k, dataset)
         self.model = self.model.to(self.device)
-        self.opt = torch.optim.Adam(self.model.parameters(), lr=0.0003)
+        self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.loss = CrossEntropyLoss()
         self.track_layers = track_layers
         self.track_loss = track_loss
