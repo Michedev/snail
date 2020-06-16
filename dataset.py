@@ -72,6 +72,11 @@ def fit_last_image(X, classes, image_names_batch, n, rotations):
     X[-1] = last_img
     return i_last_class
 
+def shuffle_data(X, y):
+    i = torch.randperm(len(X))
+    X = X[i]
+    y = y[i]
+    return X, y
 
 def fit_train_task(X, y, classes, k, n, ohe_matrix, random_rotation):
     image_names_batch = []
@@ -91,6 +96,7 @@ def fit_train_task(X, y, classes, k, n, ohe_matrix, random_rotation):
                 img = img.unsqueeze(-1)
             X[i_class * k + i_img, :, :, :] = img
             del img
+    X, y = shuffle_data(X, y)
     return image_names_batch, rotations, X, y
 
 
