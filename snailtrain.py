@@ -39,7 +39,7 @@ class SnailTrain:
         self.track_loss_freq = track_loss_freq
         self.track_params_freq = track_params_freq
 
-    def train(self, epochs: int, batch_size: int, train_classes, test_classes=None, trainsize=None, testsize=None):
+    def train(self, epochs: int, batch_size: int, train_classes, test_classes=None, trainsize=None, testsize=None, eval_length=None):
         self.model.train()
         train_data = OmniglotMetaLearning(train_classes, self.n, self.k, self.random_rotation, trainsize) if self.is_omniglot else \
             MiniImageNetMetaLearning(train_classes, self.n, self.k, self.random_rotation, trainsize)
@@ -58,9 +58,9 @@ class SnailTrain:
         @train_engine.on(Events.EPOCH_COMPLETED(every=self.track_loss_freq))
         def eval_test(engine):
             if self.track_loss:
-                self.tb_log(train_loader, self.logger, engine.state.epoch, is_train=True)
+                self.tb_log(train_loader, self.logger, engine.state.epoch, is_train=True, eval_length=eval_length)
                 if test_classes:
-                    self.tb_log(test_loader, self.logger, engine.state.epoch, is_train=False)
+                    self.tb_log(test_loader, self.logger, engine.state.epoch, is_train=False, eval_length=eval_length)
 
         @train_engine.on(Events.EPOCH_COMPLETED)
         def save_state(engine):
@@ -77,7 +77,7 @@ class SnailTrain:
 
         train_engine.run(train_loader, max_epochs=epochs)
 
-    def tb_log(self, dataloader, logger, epoch, is_train):
+    def tb_log(self, dataloader, logger, epoch, is_train, eval_length=None):
         eval_engine = Engine(lambda engine, batch: self.calc_loss(*batch, also_accuracy=True, grad=False))
         label = 'train' if is_train else 'test'
 
@@ -105,7 +105,7 @@ class SnailTrain:
 
         print('-' * 100)
         print('Epoch', epoch)
-        eval_engine.run(dataloader, 1)
+        eval_engine.run(dataloader, 1, eval_length)
 
     def calc_loss(self, X, y, y_last, also_accuracy=True, grad=True):
         X = X.to(self.device)
