@@ -116,7 +116,7 @@ class SnailTrain:
         with torch.set_grad_enabled(grad):
             yhat = self.model(X, y)
             p_yhat_last = yhat[:, :, -1]
-            loss_value = - p_yhat_last.gather(y_last.view(1, len(y_last), 1)).log().mean(dim=0).sum()
+            loss_value = - p_yhat_last.gather(1, y_last.view(len(y_last), 1)).log().mean(dim=0).sum()
         if not also_accuracy:
             return loss_value
         yhat_last = p_yhat_last.argmax(dim=1)
