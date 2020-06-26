@@ -105,7 +105,9 @@ class SnailTrain:
 
         print('-' * 100)
         print('Epoch', epoch)
+        self.model.eval()
         eval_engine.run(dataloader, 1, eval_length)
+        self.model.train()
 
     def calc_loss(self, X, y, y_last, also_accuracy=True, grad=True):
         X = X.to(self.device)
