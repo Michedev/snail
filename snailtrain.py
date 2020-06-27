@@ -30,7 +30,7 @@ class SnailTrain:
         self.model = Snail(n, k, dataset)
         self.model = self.model.to(self.device)
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.loss = CrossEntropyLoss()
+        self.loss = CrossEntropyLoss(reduce=True, reduction='mean')
         self.track_layers = track_layers
         self.track_loss = track_loss
         self.logger = SummaryWriter('tb/log_' + dataset + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")) if self.track_layers or self.track_loss else None
@@ -118,7 +118,7 @@ class SnailTrain:
         with torch.set_grad_enabled(grad):
             yhat = self.model(X, y)
             p_yhat_last = yhat[:, :, -1]
-            loss_value = - p_yhat_last.gather(1, y_last.view(len(y_last), 1)).log().mean(dim=0).sum()
+            loss_value = self.loss(p_yhat_last, y)
         if not also_accuracy:
             return loss_value
         yhat_last = p_yhat_last.argmax(dim=1)
