@@ -30,7 +30,7 @@ class SnailTrain:
         self.model = Snail(n, k, dataset)
         self.model = self.model.to(self.device)
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.loss = CrossEntropyLoss(reduce=True, reduction='mean')
+        self.loss = CrossEntropyLoss(reduction='mean')
         self.track_layers = track_layers
         self.track_loss = track_loss
         self.logger = SummaryWriter('tb/log_' + dataset + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")) if self.track_layers or self.track_loss else None
