@@ -13,7 +13,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200
          random_rotation=True, seed=13, force_download=False, device='cuda', 
          use_tensorboard=True, eval_test=True, track_loss_freq=1,
          track_weights=True, track_weights_freq=100, load_weights=True,
-         eval_length=None):
+         evalength=None):
     """
     Download the dataset if not present and train SNAIL (Simple Neural Attentive Meta-Learner).
     When training is successfully finished, the embedding network weights and snail weights are saved, as well
@@ -61,7 +61,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200
         model.load_if_exists()
     test_classes = None if not eval_test else test_classes
     model.train(epochs, batch_size, train_classes,
-                test_classes, trainsize, testsize)
+                test_classes, trainsize, testsize, evalength)
     with open('train_classes.txt', 'w') as f:
         f.write(', '.join(train_classes))
     with open('test_classes.txt', 'w') as f:
