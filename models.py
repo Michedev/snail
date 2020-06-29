@@ -17,7 +17,8 @@ def build_embedding_network_miniimagenet():
         ResidualBlockImageNet(96, 128),
         ResidualBlockImageNet(128, 256)
     )
-    network = Sequential(residual_layers, Conv2d(256, 2048, kernel_size=1), AvgPool2d(5), ReLU(),
+    network = Sequential(residual_layers, Conv2d(256, 2048, kernel_size=1),
+                         ConstantPad2d(((0, 1, 0, 1)), 0), AvgPool2d(6), ReLU(),
                          Flatten(1), Dropout(0.9), Linear(2048, 384))
     return network
 
@@ -26,8 +27,8 @@ def build_snail(in_filters, n, t):
     log2_t = int(ceil(log2(t)))
     model = Sequential()
     softmax = Softmax(dim=1)
-    filters = in_filters + n
-    model.add_module('attn1', AttentionBlock(filters, 64, 32))  # n x t x 96
+    filters = in_filters + n # bs x (n + in_filters) x t
+    model.add_module('attn1', AttentionBlock(filters, 64, 32))  # bs x (n + in_filters + 32) x t
     filters += 32
     model.add_module('tc1', TCBlock(t, filters, 128))  # n x t x 864
     filters += 128 * log2_t

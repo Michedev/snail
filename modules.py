@@ -44,21 +44,22 @@ class AttentionBlock(Module):
         self.key_layer = Linear(input_size, key_size)
         self.query_layer = Linear(input_size, key_size)
         self.value_layer = Linear(input_size, value_size)
+        self.softmax = Softmax(dim=1)
 
     def forward(self, input):
-        input = input.permute(0, 2, 1)
-        keys = self.key_layer(input)
-        query = self.query_layer(input)
-        logits = query.matmul(keys.transpose(1, 2))
-        mask = torch.ones(logits.shape[-1], logits.shape[-1], dtype=torch.bool)
+        input = input.permute(0, 2, 1)  # bs x t x channels
+        keys = self.key_layer(input)  # bs x t x ks
+        query = self.query_layer(input)  # bs x t x ks
+        logits = query.bmm(keys.permute(0, 2, 1))  # bs x t x t
+        mask = torch.ones(logits.shape[-1], logits.shape[-1], dtype=torch.bool) 
         for i in range(logits.shape[-1]):
             mask[i, i:] = False
         logits[:, mask] = - float('inf')
-        probs = functional.softmax(logits / self.sqrt_key_size, dim=1)
-        values = self.value_layer(input)
-        read = probs.matmul(values)
-        output = torch.cat([input, read], dim=-1)
-        output = output.permute(0, 2, 1)
+        probs = self.softmax(logits / self.sqrt_key_size, dim=1)  # bs x t x t
+        values = self.value_layer(input)  # bs x t x vs
+        read = probs.matmul(values)  # bs x t vs
+        output = torch.cat([input, read], dim=-1)  # bs x t x (channels + vs)
+        output = output.permute(0, 2, 1)  # bs x (channels + vs) x t
         return output
 
 
@@ -77,6 +78,7 @@ class ResidualBlockImageNet(Module):
         self.layers = Sequential(*self.layers)
         self.conv1x1 = Conv2d(in_filters, out_filters, kernel_size=1)
         self.maxpool = MaxPool2d(2)
+        self.dropout = Dropout(0.9)
 
     def forward(self, input):
         output = input
@@ -85,6 +87,7 @@ class ResidualBlockImageNet(Module):
         output2 = self.conv1x1(input)
         output += output2
         output = self.maxpool(output)
+        output = self.dropout(output)
         return output
 
 
