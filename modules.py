@@ -55,7 +55,7 @@ class AttentionBlock(Module):
         for i in range(logits.shape[-1]):
             mask[i, i:] = False
         logits[:, mask] = - float('inf')
-        probs = self.softmax(logits / self.sqrt_key_size, dim=1)  # bs x t x t
+        probs = self.softmax(logits / self.sqrt_key_size)  # bs x t x t
         values = self.value_layer(input)  # bs x t x vs
         read = probs.matmul(values)  # bs x t vs
         output = torch.cat([input, read], dim=-1)  # bs x t x (channels + vs)
