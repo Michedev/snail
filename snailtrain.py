@@ -4,6 +4,7 @@ from multiprocessing import cpu_count
 import torch
 from ignite.engine import Engine, Events
 from torch.nn import CrossEntropyLoss
+from ignite.metrics import RunningAverage
 from torch.utils.data import DataLoader, RandomSampler
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
@@ -74,8 +75,10 @@ class SnailTrain:
                     self.logger.add_histogram(name.replace('.', '/'), params, engine.state.iteration)
                     if params.grad is not None:
                         self.logger.add_histogram(name.replace('.', '/') + '/grad', params.grad, engine.state.iteration)
+        
+        RunningAverage(output_transform=lambda x: x).attach(train_engine, 'loss')
         p = ProgressBar()
-        p.attach(train_engine, ['output'])
+        p.attach(train_engine, ['loss'])
         train_engine.run(train_loader, max_epochs=epochs)
 
     def tb_log(self, dataloader, logger, epoch, is_train, eval_length=None):
