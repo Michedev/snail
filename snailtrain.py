@@ -18,7 +18,7 @@ from paths import WEIGHTSFOLDER
 class SnailTrain:
 
     def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
-                 device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True, lr=10e-4):
+                 device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True, lr=10e-4, trainpbar=True):
         assert dataset in ['omniglot', 'miniimagenet']
         self.t = n * k + 1
         self.n = n
@@ -38,6 +38,7 @@ class SnailTrain:
         self.freq_track_layers = freq_track_layers
         self.random_rotation = random_rotation
         self.track_loss_freq = track_loss_freq
+        self.trainpbar = trainpbar
         self.track_params_freq = track_params_freq
 
     def train(self, epochs: int, batch_size: int, train_classes, test_classes=None, trainsize=None, testsize=None, eval_length=None):
@@ -75,10 +76,10 @@ class SnailTrain:
                     self.logger.add_histogram(name.replace('.', '/'), params, engine.state.iteration)
                     if params.grad is not None:
                         self.logger.add_histogram(name.replace('.', '/') + '/grad', params.grad, engine.state.iteration)
-        
-        RunningAverage(output_transform=lambda x: x).attach(train_engine, 'loss')
-        p = ProgressBar()
-        p.attach(train_engine, ['loss'])
+        if not self.trainpbar:
+            RunningAverage(output_transform=lambda x: x).attach(train_engine, 'loss')
+            p = ProgressBar()
+            p.attach(train_engine, ['loss'])
         train_engine.run(train_loader, max_epochs=epochs)
 
     def tb_log(self, dataloader, logger, epoch, is_train, eval_length=None):
