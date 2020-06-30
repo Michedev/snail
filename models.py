@@ -1,4 +1,5 @@
 from modules import *
+from torch.nn import Module
 
 
 def build_embedding_network_omniglot():
@@ -70,7 +71,7 @@ class Snail(Module):
 
     def forward(self, X, y):
         batch_size = X.shape[0]
-        y = y.permute(0, 2, 1)
+        y = y.permute(0, 2, 1) # bs x n x t
         X = X.reshape(X.size(0) * X.size(1), X.size(4), X.size(2), X.size(3)) # batch x channel x w x h
         X_embedding = self.embedding_network(X)
         X_embedding = X_embedding.reshape(batch_size, X_embedding.size(1), self.t) # batch x channel x t
@@ -81,4 +82,4 @@ class Snail(Module):
 
 
 __all__ = ['build_snail_miniimagenet', 'build_embedding_network_miniimagenet',
-           'build_snail_omniglot', 'build_embedding_network_omniglot', 'build_snail']
+           'build_snail_omniglot', 'build_embedding_network_omniglot', 'Snail']

@@ -7,7 +7,7 @@ from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader, RandomSampler
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
-
+from ignite.contrib.handlers.tqdm_logger import ProgressBar
 from dataset import OmniglotMetaLearning, MiniImageNetMetaLearning
 from models import Snail
 from paths import WEIGHTSFOLDER
@@ -74,7 +74,8 @@ class SnailTrain:
                     self.logger.add_histogram(name.replace('.', '/'), params, engine.state.iteration)
                     if params.grad is not None:
                         self.logger.add_histogram(name.replace('.', '/') + '/grad', params.grad, engine.state.iteration)
-
+        p = ProgressBar()
+        p.attach(train_engine, ['output'])
         train_engine.run(train_loader, max_epochs=epochs)
 
     def tb_log(self, dataloader, logger, epoch, is_train, eval_length=None):
@@ -116,7 +117,7 @@ class SnailTrain:
         for tensor in [X, y, y_last]:
             tensor.squeeze_(dim=0)
         with torch.set_grad_enabled(grad):
-            yhat = self.model(X, y)
+            yhat = self.model(X, y) # bs x n x t
             p_yhat_last = yhat[:, :, -1]
             loss_value = self.loss(p_yhat_last, y_last)
         if not also_accuracy:
@@ -127,13 +128,14 @@ class SnailTrain:
 
     def opt_step(self, X, y, y_last, return_accuracy=False):
         self.opt.zero_grad()
-        loss_value = self.calc_loss(X, y, y_last, return_accuracy)
+        loss_value = self.calc_loss(X, y, y_last, return_accuracy, grad=True)
         if return_accuracy:
             loss_value, accuracy = loss_value
         loss_value.backward()
         self.opt.step()
         if return_accuracy:
             return accuracy
+        return loss_value
 
 
     @property
