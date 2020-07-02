@@ -121,7 +121,7 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         t = n * self.k + 1
         X = torch.zeros([t] + self.image_size)
         y = torch.zeros(t, n)
-        image_names_batch, rotations, X, y = fit_train_task(X, y, sampled_classes, self.k, n, self.ohe, random_rotation=True)
+        image_names_batch, rotations, X, y = fit_train_task(X, y, sampled_classes, self.k, n, self.ohe, random_rotation=self.random_rotation)
         i_last_class = fit_last_image(X, sampled_classes, image_names_batch, n, rotations)
         return X, y, i_last_class
 
@@ -138,7 +138,9 @@ class OmniglotMetaLearning(MetaLearningDataset):
 class MiniImageNetMetaLearning(MetaLearningDataset):
 
     def __init__(self, class_pool, n, k, random_rotation, size):
-        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[84, 84, 3], length=size)
+        if random_rotation:
+            print('warning: random rotation will be set to False because not used in MiniImageNet Dataset')
+        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, False, image_size=[84, 84, 3], length=size)
 
 
 def load_and_transform(name_image, rotation, image_size):
