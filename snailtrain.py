@@ -12,7 +12,6 @@ from ignite.contrib.handlers.tqdm_logger import ProgressBar
 from dataset import OmniglotMetaLearning, MiniImageNetMetaLearning
 from models import Snail
 from paths import WEIGHTSFOLDER
-from radam import RAdam
 
 
 class SnailTrain:
@@ -30,7 +29,7 @@ class SnailTrain:
         self.ohe_matrix = torch.eye(n)
         self.model = Snail(n, k, dataset)
         self.model = self.model.to(self.device)
-        self.opt = RAdam(self.model.parameters(), lr=lr)
+        self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.loss = CrossEntropyLoss(reduction='mean')
         self.track_layers = track_layers
         self.track_loss = track_loss
