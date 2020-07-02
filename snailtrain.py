@@ -76,7 +76,7 @@ class SnailTrain:
                     self.logger.add_histogram(name.replace('.', '/'), params, engine.state.iteration)
                     if params.grad is not None:
                         self.logger.add_histogram(name.replace('.', '/') + '/grad', params.grad, engine.state.iteration)
-        if not self.trainpbar:
+        if self.trainpbar:
             RunningAverage(output_transform=lambda x: x).attach(train_engine, 'loss')
             p = ProgressBar()
             p.attach(train_engine, ['loss'])
