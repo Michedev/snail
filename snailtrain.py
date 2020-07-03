@@ -119,14 +119,10 @@ class SnailTrain:
         y_last = y_last.to(self.device)
         for tensor in [X, y, y_last]:
             tensor.squeeze_(dim=0)
-        if not grad:
-            with torch.no_grad():
-                yhat = self.model(X, y) # bs x n x t
-                p_yhat_last = yhat[:, :, -1]
-                loss_value = self.loss(p_yhat_last, y_last)
-        else:
+        with torch.set_grad_enabled(grad):
             yhat = self.model(X, y) # bs x n x t
             p_yhat_last = yhat[:, :, -1]
+            print(p_yhat_last.shape)
             loss_value = self.loss(p_yhat_last, y_last)
         if not also_accuracy:
             return loss_value
