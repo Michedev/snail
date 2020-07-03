@@ -78,7 +78,7 @@ class ResidualBlockImageNet(Module):
         self.layers = Sequential(*self.layers)
         self.conv1x1 = Conv2d(in_filters, out_filters, kernel_size=1)
         self.maxpool = MaxPool2d(2)
-        self.dropout = Dropout(0.9)
+        self.dropout = Dropout2d(0.9)
 
     def forward(self, input):
         output = input
@@ -87,7 +87,7 @@ class ResidualBlockImageNet(Module):
         output2 = self.conv1x1(input)
         output += output2
         output = self.maxpool(output)
-        output = self.dropout(output)
+        # output = self.dropout(output)
         return output
 
 
