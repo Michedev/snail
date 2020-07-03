@@ -74,7 +74,7 @@ def fit_last_image(X, classes, image_names_batch, n, rotations):
 
 def shuffle_data(X, y):
     i = torch.randperm(len(X)-1)
-    i_last = torch.IntTensor([len(X)-1])
+    i_last = torch.LongTensor([len(X)-1])
     i = torch.cat([i, i_last])
     X = X[i]
     y = y[i]
