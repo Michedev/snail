@@ -73,10 +73,10 @@ def fit_last_image(X, classes, image_names_batch, n, rotations):
     return i_last_class
 
 def shuffle_data(X, y):
-    i = torch.arange(len(X))
-    i = torch.randperm(len(X)-1, out=i[:-1])
-    X = X[i]
-    y = y[i]
+    shuffled = torch.arange(len(X))
+    torch.randperm(len(X)-1, out=shuffled[:-1])
+    X = X[shuffled]
+    y = y[shuffled]
     return X, y
 
 def fit_train_task(X, y, classes, k, n, ohe_matrix, random_rotation):
