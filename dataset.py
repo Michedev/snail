@@ -73,9 +73,8 @@ def fit_last_image(X, classes, image_names_batch, n, rotations):
     return i_last_class
 
 def shuffle_data(X, y):
-    i = torch.randperm(len(X)-1)
-    i_last = torch.LongTensor([len(X)-1])
-    i = torch.cat([i, i_last])
+    i = torch.arange(len(X))
+    i = torch.randperm(len(X)-1, out=i[:-1])
     X = X[i]
     y = y[i]
     return X, y
@@ -112,13 +111,18 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         self.ohe = torch.eye(n)
         self.image_size = list(image_size)
         self.random_rotation = random_rotation
+        self.remaining_classes = []
         self.length = length
 
     def __len__(self):
         return len(self.class_pool) // self.n - 1 if self.length is None else self.length
 
     def __getitem__(self, i):
-        sampled_classes = sample(self.class_pool, self.n)
+        if len(self.remaining_classes) < self.n:
+            self.remaining_classes = self.class_pool[:]
+        sampled_classes = sample(self.remaining_classes, self.n)
+        for s_class in sampled_classes:
+            self.remaining_classes.remove(s_class)
         n = len(sampled_classes)
         t = n * self.k + 1
         X = torch.zeros([t] + self.image_size)
