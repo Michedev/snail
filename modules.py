@@ -11,12 +11,12 @@ class DenseBlock(Module):
         self.in_filters = in_filters
         self.out_filters = out_filters
         self.causal_conv1 = Sequential(
-            ConstantPad1d((0, dilation), 0)
+            ConstantPad1d((0, dilation), 0),
             Conv1d(in_filters, out_filters, kernel_size=2,
                                    dilation=dilation, padding=ceil(dilation / 2))
         )
         self.causal_conv2 = Sequential(
-            ConstantPad1d((0, dilation), 0)
+            ConstantPad1d((0, dilation), 0),
             Conv1d(in_filters, out_filters, kernel_size=2,
                                    dilation=dilation, padding=ceil(dilation / 2))
         )
