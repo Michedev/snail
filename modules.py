@@ -10,16 +10,22 @@ class DenseBlock(Module):
         self.dilatation = dilation
         self.in_filters = in_filters
         self.out_filters = out_filters
-        self.causal_conv1 = Conv1d(in_filters, out_filters, kernel_size=2,
-                                   dilation=dilation, padding=ceil(dilation / 2))
-        self.causal_conv2 = Conv1d(in_filters, out_filters, kernel_size=2,
-                                   dilation=dilation, padding=ceil(dilation / 2))
+        self.causal_conv1 = Sequential(
+            ConstantPad1d((0, dilation), 0),
+            Conv1d(in_filters, out_filters, kernel_size=2,
+                                   dilation=dilation)
+        )
+        self.causal_conv2 = Sequential(
+            ConstantPad1d((0, dilation), 0),
+            Conv1d(in_filters, out_filters, kernel_size=2,
+                                   dilation=dilation)
+        )
+        self.tanh = Tanh()
+        self.sigmoid = Sigmoid()
 
     def forward(self, input):
         xf, xg = self.causal_conv1(input), self.causal_conv2(input)
-        activations = Tanh()(xf) * Sigmoid()(xg)
-        if activations.shape[-1] == input.shape[-1] + 1:
-            activations = activations[:, :, :-1]
+        activations = self.tanh(xf) * self.sigmoid(xg)
         return torch.cat([input, activations], dim=1)
 
 
@@ -78,7 +84,7 @@ class ResidualBlockImageNet(Module):
         self.layers = Sequential(*self.layers)
         self.conv1x1 = Conv2d(in_filters, out_filters, kernel_size=1)
         self.maxpool = MaxPool2d(2)
-        self.dropout = Dropout(0.9)
+        self.dropout = Dropout2d(0.9)
 
     def forward(self, input):
         output = input
@@ -87,7 +93,7 @@ class ResidualBlockImageNet(Module):
         output2 = self.conv1x1(input)
         output += output2
         output = self.maxpool(output)
-        output = self.dropout(output)
+        # output = self.dropout(output)
         return output
 
 

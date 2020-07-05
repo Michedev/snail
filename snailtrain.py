@@ -33,7 +33,8 @@ class SnailTrain:
         self.loss = CrossEntropyLoss(reduction='mean')
         self.track_layers = track_layers
         self.track_loss = track_loss
-        self.logger = SummaryWriter('tb/log_' + dataset + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")) if self.track_layers or self.track_loss else None
+        self.logger = SummaryWriter('tb/log_' + dataset + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")) \
+                        if self.track_layers or self.track_loss else None
         self.freq_track_layers = freq_track_layers
         self.random_rotation = random_rotation
         self.track_loss_freq = track_loss_freq

@@ -47,7 +47,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200
         classes = list(OMNIGLOTFOLDER.glob('*/*/'))
         train_classes_file = ROOT / f'train_classes_{dataset}.txt'
         test_classes_file = ROOT / f'test_classes_{dataset}.txt'
-        train_classes, test_classes = get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize)
+        train_classes, test_classes = get_train_test_classes(classes, test_classes_file, train_classes_file, 1200)
     else:
         pull_data_miniimagenet(force_download)
         train_classes = (MINIIMAGENETFOLDER / 'train').dirs()
