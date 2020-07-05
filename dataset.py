@@ -116,7 +116,7 @@ class MetaLearningDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.class_pool) // self.n - 1 if self.length is None else self.length
-
+        
     def __getitem__(self, i):
         if len(self.remaining_classes) < self.n:
             self.remaining_classes = self.class_pool[:]

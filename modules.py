@@ -10,14 +10,22 @@ class DenseBlock(Module):
         self.dilatation = dilation
         self.in_filters = in_filters
         self.out_filters = out_filters
-        self.causal_conv1 = Conv1d(in_filters, out_filters, kernel_size=2,
+        self.causal_conv1 = Sequential(
+            ConstantPad1d((0, dilation), 0)
+            Conv1d(in_filters, out_filters, kernel_size=2,
                                    dilation=dilation, padding=ceil(dilation / 2))
-        self.causal_conv2 = Conv1d(in_filters, out_filters, kernel_size=2,
+        )
+        self.causal_conv2 = Sequential(
+            ConstantPad1d((0, dilation), 0)
+            Conv1d(in_filters, out_filters, kernel_size=2,
                                    dilation=dilation, padding=ceil(dilation / 2))
+        )
+        self.tanh = Tanh()
+        self.sigmoid = Sigmoid()
 
     def forward(self, input):
         xf, xg = self.causal_conv1(input), self.causal_conv2(input)
-        activations = Tanh()(xf) * Sigmoid()(xg)
+        activations = self.tanh(xf) * self.sigmoid(xg)
         if activations.shape[-1] == input.shape[-1] + 1:
             activations = activations[:, :, :-1]
         return torch.cat([input, activations], dim=1)
