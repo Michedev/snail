@@ -42,8 +42,10 @@ class SnailTrain:
 
     def train(self, epochs: int, batch_size: int, train_classes, test_classes=None, trainsize=None, testsize=None, eval_length=None):
         self.model.train()
-        train_data = OmniglotMetaLearning(train_classes, self.n, self.k, self.random_rotation, trainsize) if self.is_omniglot else \
-            MiniImageNetMetaLearning(train_classes, self.n, self.k, self.random_rotation, trainsize)
+        train_data = OmniglotMetaLearning(train_classes, self.n, self.k,
+                         self.random_rotation, trainsize) if self.is_omniglot else \
+            MiniImageNetMetaLearning(train_classes, self.n, self.k,
+                         self.random_rotation, trainsize)
         train_loader = DataLoader(train_data, batch_size=batch_size,
                                   shuffle=True, num_workers=cpu_count(),
                                   drop_last=True)
