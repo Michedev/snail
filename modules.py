@@ -10,16 +10,8 @@ class DenseBlock(Module):
         self.dilatation = dilation
         self.in_filters = in_filters
         self.out_filters = out_filters
-        self.causal_conv1 = Sequential(
-            ConstantPad1d((0, dilation), 0),
-            Conv1d(in_filters, out_filters, kernel_size=2,
-                                   dilation=dilation)
-        )
-        self.causal_conv2 = Sequential(
-            ConstantPad1d((0, dilation), 0),
-            Conv1d(in_filters, out_filters, kernel_size=2,
-                                   dilation=dilation)
-        )
+        self.causal_conv1 = Conv1d(in_filters, out_filters, kernel_size=2, dilation=dilation)
+        self.causal_conv2 = Conv1d(in_filters, out_filters, kernel_size=2, dilation=dilation)
         self.tanh = Tanh()
         self.sigmoid = Sigmoid()
 
