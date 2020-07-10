@@ -1,5 +1,5 @@
 from torch.nn import *
-from torch.nn import ReflectionPad1d
+from torch.nn import ReflectionPad1d, ConstantPad1d
 import torch
 from math import log2, ceil, sqrt, floor
 
@@ -12,14 +12,13 @@ class DenseBlock(Module):
         self.in_filters = in_filters
         self.out_filters = out_filters
         self.causal_conv1 = Sequential(
-            ReflectionPad1d((0, dilation)),
+            ConstantPad1d((dilation, 0), 0),
             Conv1d(in_filters, out_filters, kernel_size=2,
                                    dilation=dilation)
         )
         self.causal_conv2 = Sequential(
-            ReflectionPad1d((0, dilation)),
-            Conv1d(in_filters, out_filters, kernel_size=2,
-                                   dilation=dilation)
+            ConstantPad1d((dilation, 0), 0),
+            Conv1d(in_filters, out_filters, kernel_size=2, dilation=dilation)
         )        
         self.tanh = Tanh()
         self.sigmoid = Sigmoid()
