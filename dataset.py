@@ -9,7 +9,8 @@ from path import Path
 import wget
 from skimage import io, transform
 from torchvision.datasets.utils import download_file_from_google_drive
-
+from PIL import Image
+from torchvision import transforms
 import os
 from paths import OMNIGLOTFOLDER, MINIIMAGENETFOLDER
 
@@ -47,52 +48,6 @@ def sample_batch(batch_size, train_classes, t, n, k, random_rotation=True, ohe_m
     return X, y, y_last_class
 
 
-def fit_task(classes: List[Path], k: int, random_rotation=True, ohe_matrix=None):
-    n = len(classes)
-    t = n * k + 1
-    X = torch.zeros(t, 28, 28, 1)
-    y = torch.zeros(t, n)
-    image_names_batch, rotations = fit_train_task(X, y, classes, k, n, ohe_matrix, random_rotation)
-    i_last_class = fit_last_image(X, classes, image_names_batch, n, rotations)
-    return X, y, i_last_class
-
-
-def fit_last_image(X, classes, image_names_batch, n, rotations):
-    i_last_class = randint(0, n - 1)
-    last_class = classes[i_last_class]
-    last_class_images = last_class.files()
-    last_img = None
-    rotation_last = rotations[i_last_class]
-    while not last_img or last_img in image_names_batch:
-        last_img = sample(last_class_images, 1)[0]
-    last_img = load_and_transform(last_img, rotation_last, X.shape[1:])
-    last_img = torch.from_numpy(last_img)
-    if X.shape[-1] == 1:
-        last_img = last_img.unsqueeze(-1)
-    X[-1] = last_img
-    return i_last_class
-
-def fit_train_task(X, y, classes, k, n, ohe_matrix, random_rotation):
-    image_names_batch = []
-    rotations = {}
-    if ohe_matrix is None:
-        ohe_matrix = torch.eye(n)
-    for i_class, class_name in enumerate(classes):
-        name_images = sample(class_name.files(), k)
-        image_names_batch += name_images
-        y[i_class * k: (i_class + 1) * k, :] = ohe_matrix[[i_class] * k]
-        rotation = 0 if not random_rotation else 90 * randint(0, 3)
-        rotations[i_class] = rotation
-        for i_img, name_image in enumerate(name_images):
-            img = load_and_transform(name_image, rotation, X.shape[1:])
-            img = torch.from_numpy(img)
-            if X.shape[-1] == 1:
-                img = img.unsqueeze(-1)
-            X[i_class * k + i_img, :, :, :] = img
-            del img
-    return image_names_batch, rotations, X, y
-
-
 class MetaLearningDataset(torch.utils.data.Dataset):
 
     def __init__(self, class_pool, n, k, random_rotation, image_size, length=None):
@@ -105,6 +60,12 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         self.random_rotation = random_rotation
         self.remaining_classes = []
         self.length = length
+        self.preprocess_image = transforms.Compose([
+                transforms.Resize(image_size[1:]),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ])
+
 
     def __len__(self):
         return len(self.class_pool) // self.n - 1 if self.length is None else self.length
@@ -119,35 +80,75 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         t = n * self.k + 1
         X = torch.zeros([t] + self.image_size)
         y = torch.zeros(t, n)
-        image_names_batch, rotations, X, y = fit_train_task(X, y, sampled_classes, self.k, n, self.ohe, random_rotation=self.random_rotation)
-        i_last_class = fit_last_image(X, sampled_classes, image_names_batch, n, rotations)
+        image_names_batch, rotations, X, y = self.fit_train_task(X, y, sampled_classes)
+        i_last_class = self.fit_last_image(X, sampled_classes, image_names_batch, rotations)
         return X, y, i_last_class
 
     def shuffle(self):
         shuffle(self.class_pool)
 
+    def fit_train_task(self, X, y, classes):
+        image_names_batch = []
+        rotations = {}
+        for i_class, class_name in enumerate(classes):
+            name_images = sample(class_name.files(), self.k)
+            image_names_batch += name_images
+            y[i_class * self.k: (i_class + 1) * self.k, :] = self.ohe[[i_class] * self.k]
+            rotation = 0 if not self.random_rotation else 90 * randint(0, 3)
+            rotations[i_class] = rotation
+            for i_img, name_image in enumerate(name_images):
+                img = self.load_and_transform(name_image, rotation)
+                if X.shape[-1] == 1:
+                    img = img.unsqueeze(-1)
+                X[i_class * self.k + i_img, :, :, :] = img
+                del img
+        return image_names_batch, rotations, X, y
+
+    def load_and_transform(self, name_image, rotation):
+        img = Image.open(name_image)
+        if rotation != 0:
+            img = img.rotate(rotation)
+        return self.preprocess_image(img)
+
+    def fit_last_image(self, X, classes, image_names_batch, rotations):
+        i_last_class = randint(0, self.n - 1)
+        last_class = classes[i_last_class]
+        last_class_images = last_class.files()
+        last_img = None
+        rotation_last = rotations[i_last_class]
+        while not last_img or last_img in image_names_batch:
+            last_img = sample(last_class_images, 1)[0]
+        last_img = self.load_and_transform(last_img, rotation_last)
+        if X.shape[-1] == 1:
+            last_img = last_img.unsqueeze(-1)
+        X[-1] = last_img
+        return i_last_class
+
+
+
+
 
 class OmniglotMetaLearning(MetaLearningDataset):
 
-    def __init__(self, class_pool, n, k, random_rotation, size):
-        super(OmniglotMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[28, 28, 1], length=size)
+    def __init__(self, class_pool, n, k, random_rotation, length=None):
+        super(OmniglotMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[1, 28, 28], length=length)
 
 
 class MiniImageNetMetaLearning(MetaLearningDataset):
 
-    def __init__(self, class_pool, n, k, random_rotation, size):
+    def __init__(self, class_pool, n, k, random_rotation, length=None):
         if random_rotation:
             print('warning: random rotation will be set to False because not used in MiniImageNet Dataset')
-        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, False, image_size=[84, 84, 3], length=size)
+        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, False, image_size=[3, 84, 84], length=length)
+
 
 
 def load_and_transform(name_image, rotation, image_size):
     assert len(image_size) == 3
-    img = io.imread(name_image, as_gray=image_size[-1] == 1)
-    img = transform.resize(img, image_size[:-1], mode='constant')
+    img = Image.open(name_image)
     if rotation != 0:
-        img = transform.rotate(img, rotation)
-    return img
+        img = img.rotate(rotation)
+    return preprocess_image(img)
 
 
 def get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize):
