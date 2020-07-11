@@ -1,57 +1,61 @@
 from path import Path
-from models import *
+from models import Snail
 from dataset import sample_batch, pull_data_omniglot
 from fire import Fire
 import torch
+from sklearn.metrics import accuracy_score
 import gc
+from ignite.engine import Engine, Events
 from tqdm import tqdm
 
 
 def main(dataset='omniglot',
          n=5, k=5, batch_size=32,
-         model_path='model_weights/snail_omniglot_5_5.pth',
-         embedding_path='model_weights/embedding_network_omniglot_5_5.pth',
-         test_classes_path='test_classes.txt',
-         device='cpu', n_sample=500):
+         device='cpu', n_sample=500,
+         calc_accuracy=True):
     assert dataset in ['omniglot', 'miniimagenet']
-    pull_data_omniglot(force=False)
-    t = n * k + 1
-    if dataset == 'omniglot':
-        embedding_network = build_embedding_network_omniglot().to(device)
-        snail = build_snail_omniglot(n, t).to(device)
-    else:
-        embedding_network = build_embedding_network_miniimagenet().to(device)
-        snail = build_snail_miniimagenet(n, t).to(device)
-    embedding_network.load_state_dict(torch.load(embedding_path))
-    snail.load_state_dict(torch.load(model_path))
+    snail = Snail(n, k, dataset)
+    snail.load_state_dict(torch.load(snail.path))
     embedding_network = embedding_network.eval()
     snail = snail.eval()
-    embedding_network.requires_grad_(False)
     snail.requires_grad_(False)
-    with open(test_classes_path) as f:
-        test_classes = f.read()
-    test_classes = list(map(Path, test_classes.split(', ')))
     loss = torch.nn.CrossEntropyLoss()
     loss_values = torch.zeros(n_sample)
-    acc_values = torch.zeros(n_sample)
-    ohe_matrix = torch.eye(n)
-    for i in tqdm(range(n_sample)):
-        X, y, y_last = sample_batch(batch_size, test_classes, t, n, k, random_rotation=False, ohe_matrix=ohe_matrix)
-        yhat = predict(embedding_network, snail, X, y)
-        p_yhat_last: torch.Tensor = yhat[:, :, -1]
-        loss_value = loss(p_yhat_last, y_last)
-        yhat_last = p_yhat_last.argmax(1)
-        acc = (yhat_last == y_last).float().mean()
-        loss_values[i] = loss_value
-        acc_values[i] = acc
-        gc.collect()
+    if calc_accuracy:
+        acc_values = torch.zeros(n_sample)
+
+    def predict_step(X, y, y_last):
+        yhat = snail(X, y)
+        yhat_last = yhat[:, :, -1]
+        return yhat_last, y_last
+
+    predictor = Engine(lambda e, b: predict_step(*b))
+
+    @predictor.on(Events.ITERATION_COMPLETED)
+    def eval_loss(engine):
+        y_pred, y_true = engine.state.output
+        loss_value = loss(y_pred, y_true)
+        loss_values[engine.state.iteration] = loss_value
+
+    if calc_accuracy:
+            @predictor.on(Events.ITERATION_COMPLETED)
+            def eval_accuracy(engine):
+                y_pred, y_true = engine.state.output
+                y_pred = y_pred.argmax(dim=1)
+                accuracy = accuracy_score(y_true, y_pred)
+                acc_values[engine.state.iteration] = accuracy
+
+
+
+    
     print('\n', '='*80, '\n', sep='', end='')
-    print('avg loss:', loss_values.mean().item())
-    print('std loss:', loss_values.std(unbiased=True).item())
+    print('loss:', loss_values.mean().item(),
+             '+-', loss_values.std(unbiased=True).item())
     print('\n', '='*80, '\n', sep='', end='')
-    print('avg acc:', acc_values.mean().item())
-    print('std acc:', acc_values.std(unbiased=True).item())
-    print('\n', '='*80, '\n', sep='', end='')
+    if calc_accuracy:
+        print('avg acc:', acc_values.mean().item(),
+                '+-', acc_values.std(unbiased=True).item())
+        print('\n', '='*80, '\n', sep='', end='')
 
 
 if __name__ == '__main__':
