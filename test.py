@@ -8,6 +8,7 @@ from sklearn.metrics import accuracy_score
 import gc
 from ignite.engine import Engine, Events
 from tqdm import tqdm
+from ignite.contrib.handlers.tqdm_logger import ProgressBar
 from paths import MINIIMAGENETFOLDER
 
 
@@ -28,7 +29,7 @@ def main(dataset='omniglot',
     data_loader = DataLoader(data, batch_size=batch_size, pin_memory=use_cuda)
     snail = Snail(n, k, dataset)
     snail.load_state_dict(torch.load(snail.path, map_location=torch.device(device)))
-    embedding_network = embedding_network.eval()
+    snail = snail.to(device)
     snail = snail.eval()
     snail.requires_grad_(False)
     loss = torch.nn.CrossEntropyLoss()
@@ -40,9 +41,10 @@ def main(dataset='omniglot',
         X = X.to(device)
         y = y.to(device)
         y_last = y_last.to(device)
-        yhat = snail(X, y)
+        with torch.no_grad():
+            yhat = snail(X, y)
         yhat_last = yhat[:, :, -1]
-        return yhat_last, y_last
+        return yhat_last.cpu(), y_last.cpu()
 
     predictor = Engine(lambda e, b: predict_step(*b))
 
@@ -59,6 +61,9 @@ def main(dataset='omniglot',
                 y_pred = y_pred.argmax(dim=1)
                 accuracy = accuracy_score(y_true, y_pred)
                 acc_values[engine.state.iteration] = accuracy
+
+    p = ProgressBar()
+    p.attach(predictor)
 
     predictor.run(data_loader, max_epochs=1)
     
