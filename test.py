@@ -1,12 +1,14 @@
 from path import Path
 from models import Snail
-from dataset import sample_batch, pull_data_omniglot
+from dataset import OmniglotMetaLearning, MiniImageNetMetaLearning
+from torch.utils.data import DataLoader
 from fire import Fire
 import torch
 from sklearn.metrics import accuracy_score
 import gc
 from ignite.engine import Engine, Events
 from tqdm import tqdm
+from paths import MINIIMAGENETFOLDER
 
 
 def main(dataset='omniglot',
@@ -14,8 +16,18 @@ def main(dataset='omniglot',
          device='cpu', n_sample=500,
          calc_accuracy=True):
     assert dataset in ['omniglot', 'miniimagenet']
+    use_cuda = 'cuda' in device
+    if dataset == 'omniglot':
+        with open('test_classes.txt') as f:
+            test_classes = f.read().split(', ')
+        data = OmniglotMetaLearning(test_classes, n, k,
+                 random_rotation=False, length=n_sample)
+    else:
+        test_classes = (MINIIMAGENETFOLDER / 'test').dirs()
+        data = MiniImageNetMetaLearning(test_classes, n, k, False, length=n_sample)
+    data_loader = DataLoader(data, batch_size=batch_size, pin_memory=use_cuda)
     snail = Snail(n, k, dataset)
-    snail.load_state_dict(torch.load(snail.path))
+    snail.load_state_dict(torch.load(snail.path, map_location=torch.device(device)))
     embedding_network = embedding_network.eval()
     snail = snail.eval()
     snail.requires_grad_(False)
@@ -25,6 +37,9 @@ def main(dataset='omniglot',
         acc_values = torch.zeros(n_sample)
 
     def predict_step(X, y, y_last):
+        X = X.to(device)
+        y = y.to(device)
+        y_last = y_last.to(device)
         yhat = snail(X, y)
         yhat_last = yhat[:, :, -1]
         return yhat_last, y_last
@@ -45,14 +60,13 @@ def main(dataset='omniglot',
                 accuracy = accuracy_score(y_true, y_pred)
                 acc_values[engine.state.iteration] = accuracy
 
-
-
+    predictor.run(data_loader, max_epochs=1)
     
     print('\n', '='*80, '\n', sep='', end='')
     print('loss:', loss_values.mean().item(),
              '+-', loss_values.std(unbiased=True).item())
-    print('\n', '='*80, '\n', sep='', end='')
     if calc_accuracy:
+        print('\n', '='*80, '\n', sep='', end='')
         print('avg acc:', acc_values.mean().item(),
                 '+-', acc_values.std(unbiased=True).item())
         print('\n', '='*80, '\n', sep='', end='')
