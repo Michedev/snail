@@ -59,7 +59,8 @@ def main(dataset='omniglot',
             def eval_accuracy(engine):
                 y_pred, y_true = engine.state.output
                 y_pred = y_pred.argmax(dim=1)
-                accuracy = accuracy_score(y_true, y_pred)
+                accuracy = y_pred == y_true
+                accuracy = accuracy.float().mean()
                 acc_values[engine.state.iteration] = accuracy
 
     p = ProgressBar()
