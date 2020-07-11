@@ -26,16 +26,16 @@ def main(dataset='omniglot',
     else:
         test_classes = (MINIIMAGENETFOLDER / 'test').dirs()
         data = MiniImageNetMetaLearning(test_classes, n, k, False, length=n_sample)
-    data_loader = DataLoader(data, batch_size=batch_size, pin_memory=use_cuda)
+    data_loader = DataLoader(data, batch_size=batch_size, pin_memory=use_cuda, drop_last=True)
     snail = Snail(n, k, dataset)
     snail.load_state_dict(torch.load(snail.path, map_location=torch.device(device)))
     snail = snail.to(device)
     snail = snail.eval()
     snail.requires_grad_(False)
     loss = torch.nn.CrossEntropyLoss()
-    loss_values = torch.zeros(n_sample)
+    loss_values = torch.zeros(n_sample // batch_size, dtype=torch.float32)
     if calc_accuracy:
-        acc_values = torch.zeros(n_sample)
+        acc_values = torch.zeros(n_sample // batch_size, dtype=torch.float32)
 
     def predict_step(X, y, y_last):
         X = X.to(device)
@@ -52,7 +52,7 @@ def main(dataset='omniglot',
     def eval_loss(engine):
         y_pred, y_true = engine.state.output
         loss_value = loss(y_pred, y_true)
-        loss_values[engine.state.iteration] = loss_value
+        loss_values[engine.state.iteration-1] = loss_value
 
     if calc_accuracy:
             @predictor.on(Events.ITERATION_COMPLETED)
@@ -61,7 +61,7 @@ def main(dataset='omniglot',
                 y_pred = y_pred.argmax(dim=1)
                 accuracy = y_pred == y_true
                 accuracy = accuracy.float().mean()
-                acc_values[engine.state.iteration] = accuracy
+                acc_values[engine.state.iteration-1] = accuracy
 
     p = ProgressBar()
     p.attach(predictor)
@@ -76,7 +76,7 @@ def main(dataset='omniglot',
         print('avg acc:', acc_values.mean().item(),
                 '+-', acc_values.std(unbiased=True).item())
         print('\n', '='*80, '\n', sep='', end='')
-
+    print('accuracy', acc_values)
 
 if __name__ == '__main__':
     Fire(main)
