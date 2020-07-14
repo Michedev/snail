@@ -44,13 +44,11 @@ class SupervisedMiniImagenet(torch.utils.data.Dataset):
         
 
 def build_model_pretraining(num_classes):
+    embedding_nn = build_embedding_network_miniimagenet()
     classifier = Sequential(Linear(384, 100), BatchNorm1d(100), ReLU(), Linear(100, num_classes), Softmax(1))
-    model = Sequential(
-        [
-            ('embedding_nn', build_embedding_network_miniimagenet()),
-            ('classifier', classifier)
-        ]
-    )
+    model = Sequential()
+    model.add_module('embedding_nn', embedding_nn)
+    model.add_module('classifier', classifier)
     return model
 
 def train_model(model, classes, device, epochs, batch_size):
