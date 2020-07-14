@@ -1,4 +1,5 @@
 import torch
+from path import Path
 from torch.nn import Sequential, Linear, BatchNorm1d, ReLU, LeakyReLU, Softmax, ModuleDict, CrossEntropyLoss
 from models import build_embedding_network_miniimagenet
 from torch.utils.data import DataLoader
@@ -15,8 +16,10 @@ from fire import Fire
 
 
 TRAIN_MINIIMAGENET = MINIIMAGENETFOLDER / 'train'
-EMBEDDING_PATH = WEIGHTSFOLDER / 'embedding_miniimagenet.pth'
-EMBEDDING_CLASSIFIER_PATH = WEIGHTSFOLDER / 'embedding_classifier_miniimagenet.path'
+PRETRAINING: Path = WEIGHTSFOLDER / 'embedding-pretraining'
+PRETRAINING.mkdir_p()
+EMBEDDING_PATH = PRETRAINING / 'embedding_miniimagenet.pth'
+EMBEDDING_CLASSIFIER_PATH = PRETRAINING / 'embedding_classifier_miniimagenet.path'
 
 class SupervisedMiniImagenet(torch.utils.data.Dataset):
     
