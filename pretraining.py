@@ -84,9 +84,9 @@ def train_model(model, classes, device, epochs, batch_size):
 
 
 def main(epochs, batch_size, device='cuda'):
-    model = build_model_pretraining()
     model = model.to(device)
     train_classes = TRAIN_MINIIMAGENET.dirs()
+    model = build_model_pretraining(len(train_classes))
     train_model(model, train_classes, device, epochs, batch_size)
 
 if __name__ == "__main__":
