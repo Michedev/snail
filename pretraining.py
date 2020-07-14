@@ -19,7 +19,7 @@ TRAIN_MINIIMAGENET = MINIIMAGENETFOLDER / 'train'
 PRETRAINING: Path = WEIGHTSFOLDER / 'embedding-pretraining'
 PRETRAINING.mkdir_p()
 EMBEDDING_PATH = PRETRAINING / 'embedding_miniimagenet.pth'
-EMBEDDING_CLASSIFIER_PATH = PRETRAINING / 'embedding_classifier_miniimagenet.path'
+EMBEDDING_CLASSIFIER_PATH = PRETRAINING / 'embedding_classifier_miniimagenet.pth'
 
 class SupervisedMiniImagenet(torch.utils.data.Dataset):
     
