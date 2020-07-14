@@ -11,6 +11,7 @@ from PIL import Image
 from ignite.metrics import RunningAverage
 from torchvision import transforms
 from ignite.contrib.handlers.tqdm_logger import ProgressBar
+from fire import Fire
 
 
 TRAIN_MINIIMAGENET = MINIIMAGENETFOLDER / 'train'
@@ -87,4 +88,6 @@ def main(epochs, batch_size, device='cuda'):
     model = model.to(device)
     train_classes = TRAIN_MINIIMAGENET.dirs()
     train_model(model, train_classes, device, epochs, batch_size)
-    
+
+if __name__ == "__main__":
+    Fire(main)
