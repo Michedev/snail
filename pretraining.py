@@ -50,7 +50,6 @@ def build_model_pretraining(num_classes):
     model.add_module('classifier', classifier)
     return model
 
-
 def train_model(model, classes, device, epochs, batch_size):
     opt = torch.optim.Adam(model.parameters())
     loss = CrossEntropyLoss()
