@@ -1,5 +1,6 @@
 from modules import *
 from torch.nn import Module
+from paths import WEIGHTSFOLDER
 
 
 def build_embedding_network_omniglot():
@@ -67,6 +68,8 @@ class Snail(Module):
             self.snail = build_snail_miniimagenet(n, t)
             self.embedding_network = build_embedding_network_miniimagenet()
         self.dataset = dataset
+        self.fname = f'snail_{dataset}_{n}_{k}.pth'
+        self.path = WEIGHTSFOLDER / self.fname
         self.t = t
 
     def forward(self, X, y):
