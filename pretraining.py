@@ -13,7 +13,7 @@ from torchvision import transforms
 from ignite.contrib.handlers.tqdm_logger import ProgressBar
 
 
-TRAIN_MINIIMAGET = MINIIMAGENETFOLDER / 'train'
+TRAIN_MINIIMAGENET = MINIIMAGENETFOLDER / 'train'
 
 
 class SupervisedMiniImagenet(torch.utils.data.Dataset):
@@ -80,3 +80,11 @@ def train_model(model, classes, device, epochs, batch_size):
 
     trainer.run(train_data, max_epochs=epochs)
 
+
+
+def main(epochs, batch_size, device='cuda'):
+    model = build_model_pretraining()
+    model = model.to(device)
+    train_classes = TRAIN_MINIIMAGENET.dirs()
+    train_model(model, train_classes, device, epochs, batch_size)
+    
