@@ -16,6 +16,7 @@ from fire import Fire
 
 TRAIN_MINIIMAGENET = MINIIMAGENETFOLDER / 'train'
 EMBEDDING_PATH = WEIGHTSFOLDER / 'embedding_miniimagenet.pth'
+EMBEDDING_CLASSIFIER_PATH = WEIGHTSFOLDER / 'embedding_classifier_miniimagenet.path'
 
 class SupervisedMiniImagenet(torch.utils.data.Dataset):
     
@@ -82,7 +83,8 @@ def train_model(model, classes, device, epochs, batch_size):
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def save_embedding(engine):
-        torch.save(model[0].state_dict(), WEIGHTSFOLDER / 'embedding_miniimagenet.pth')
+        torch.save(model[0].state_dict(), EMBEDDING_PATH)
+        torch.save(model.state_dict(), EMBEDDING_CLASSIFIER_PATH)
 
     trainer.run(train_loader, max_epochs=epochs)
 
@@ -92,9 +94,9 @@ def main(epochs, batch_size, device='cuda'):
     train_classes = TRAIN_MINIIMAGENET.dirs()
     model = build_model_pretraining(len(train_classes))
     model = model.to(device)
-    if EMBEDDING_PATH.exists():
-        model.load_state_dict(torch.load(EMBEDDING_PATH, map_location=torch.device(device)))
-        print('loaded embedding from', EMBEDDING_PATH)
+    if EMBEDDING_CLASSIFIER_PATH.exists():
+        model.load_state_dict(torch.load(EMBEDDING_CLASSIFIER_PATH, map_location=torch.device(device)))
+        print('loaded embedding from', EMBEDDING_CLASSIFIER_PATH)
     train_model(model, train_classes, device, epochs, batch_size)
 
 if __name__ == "__main__":
