@@ -28,14 +28,15 @@ class SnailTrain:
         self.is_miniimagenet = dataset == 'miniimagenet'
         self.ohe_matrix = torch.eye(n)
         self.model = Snail(n, k, dataset)
-        self.model = self.model.to(self.device)
         if self.is_miniimagenet:
-            self.model.embedding_network.load_state_dict(torch.load(PRETRAINED_EMBEDDING_PATH, map_location=self.device))
+            self.model.embedding_network.load_state_dict(torch.load(PRETRAINED_EMBEDDING_PATH, map_location=torch.device('cpu')))
             self.model.embedding_network = \
                  Sequential(self.model.embedding_network,
                             Linear(384, 1000), BatchNorm1d(1000), 
                             Dropout(0.8), LeakyReLU(), 
                             Linear(1000, 384))
+            print('Load pretrained embedding MiniImagenet')
+        self.model = self.model.to(self.device)
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.lr_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt, 'max', factor=0.1, patience=5)
         self.loss = CrossEntropyLoss(reduction='mean')
