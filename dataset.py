@@ -61,7 +61,7 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         self.remaining_classes = []
         self.length = length
         padding = 224 - image_size[1]
-        padding = [floor(padding), floor(padding), ceil(padding), ceil(padding)]
+        padding = (floor(padding), floor(padding), ceil(padding), ceil(padding))
         self.preprocess_image = transforms.Compose([
                 transforms.Resize(image_size[1:]),
                 transforms.ColorJitter(.2,.2,.2,.2 ),
