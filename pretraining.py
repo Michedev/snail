@@ -1,6 +1,6 @@
 import torch
 from path import Path
-from torch.nn import Sequential, Linear, BatchNorm1d, ReLU, LeakyReLU, Softmax, ModuleDict, CrossEntropyLoss
+from torch.nn import Sequential, Linear, BatchNorm1d, ReLU, LeakyReLU, Softmax, ModuleDict, CrossEntropyLoss, Module
 from models import build_embedding_network_miniimagenet
 from torch.utils.data import DataLoader
 from collections import OrderedDict
@@ -39,15 +39,16 @@ class SupervisedMiniImagenet(torch.utils.data.Dataset):
         img = self.preprocess_image(img)
         return img, y
 
-        
+class MiniImageNetClassifier(Module):
 
-def build_model_pretraining(num_classes):
-    embedding_nn = build_embedding_network_miniimagenet()
-    classifier = Sequential(Linear(384, 100), BatchNorm1d(100), ReLU(), Linear(100, num_classes), Softmax(1))
-    model = Sequential()
-    model.add_module('embedding_nn', embedding_nn)
-    model.add_module('classifier', classifier)
-    return model
+    def __init__(self, num_classes):
+        super().__init__()
+        self.embedding_nn = build_embedding_network_miniimagenet()
+        self.classifier = Sequential(Linear(384, 100), BatchNorm1d(100), ReLU(), Linear(100, num_classes), Softmax(1))
+
+    def forward(self, x):
+        return self.classifier(self.embedding_nn(x))
+
 
 def train_model(model, classes, device, epochs, batch_size):
     opt = torch.optim.Adam(model.parameters())
@@ -66,6 +67,7 @@ def train_model(model, classes, device, epochs, batch_size):
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def eval_test(engine):
+        model.eval()
         print('Epoch', engine.state.epoch)
         metrics = dict(accuracy=Accuracy(), crossentropy=Loss(CrossEntropyLoss()))
         evaluator = create_supervised_evaluator(model, metrics, device=torch.device(device))
@@ -78,10 +80,11 @@ def train_model(model, classes, device, epochs, batch_size):
         acc = evaluator.state.metrics['accuracy']
         print('Test accuracy', evaluator.state.metrics['accuracy'])
         print('Test crossentropy', evaluator.state.metrics['crossentropy'])
+        model.train()
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def save_embedding(engine):
-        torch.save(model[0].state_dict(), PRETRAINED_EMBEDDING_PATH)
+        torch.save(model.embedding_nn.state_dict(), PRETRAINED_EMBEDDING_PATH)
         torch.save(model.state_dict(), PRETRAINED_EMBEDDING_CLASSIFIER_PATH)
 
     trainer.run(train_loader, max_epochs=epochs)
@@ -90,7 +93,7 @@ def train_model(model, classes, device, epochs, batch_size):
 
 def main(epochs, batch_size, device='cuda'):
     train_classes = TRAIN_MINIIMAGENET.dirs()
-    model = build_model_pretraining(len(train_classes))
+    model = MiniImageNetClassifier(len(train_classes))
     model = model.to(device)
     if PRETRAINED_EMBEDDING_CLASSIFIER_PATH.exists():
         model.load_state_dict(torch.load(PRETRAINED_EMBEDDING_CLASSIFIER_PATH, map_location=torch.device(device)))
