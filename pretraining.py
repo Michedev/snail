@@ -54,7 +54,7 @@ def train_model(model, classes, device, epochs, batch_size):
     opt = torch.optim.Adam(model.parameters())
     loss = CrossEntropyLoss()
     trainer = create_supervised_trainer(model, opt, loss, device=torch.device(device))
-
+    lr_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, 'max', factor=0.1, patience=5)
     dataset = SupervisedMiniImagenet(classes)
     train_len = int(len(dataset)*0.8)
     test_len = len(dataset) - train_len
@@ -80,6 +80,7 @@ def train_model(model, classes, device, epochs, batch_size):
         acc = evaluator.state.metrics['accuracy']
         print('Test accuracy', evaluator.state.metrics['accuracy'])
         print('Test crossentropy', evaluator.state.metrics['crossentropy'])
+        lr_plateau.step(evaluator.state.metrics['accuracy'])
         model.train()
 
     @trainer.on(Events.EPOCH_COMPLETED)
