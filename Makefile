@@ -24,9 +24,11 @@ k = 1
 epochs = 100
 batchsize = 16
 trainsize = 30000
-lr = 10e-4
+lr = 3e-4
 
 train-miniimagenet-n5-k1:
 	python3 train.py --dataset='miniimagenet' --n=$n --k=$k --epochs=$(epochs) --batch-size=$(batchsize) --trainsize=$(trainsize) --testsize=64 --device='cuda:1' --evalength=64 --lr=$(lr) --track-weights=True --train-weights-freq=10000 --random-rotation=False --trainpbar=True
 	
+train-miniimagenet-n5-k1-with-log:
+	python3 train.py --dataset='miniimagenet' --n=$n --k=$k --epochs=$(epochs) --batch-size=$(batchsize) --trainsize=$(trainsize) --testsize=64 --device='cuda:1' --evalength=64 --lr=$(lr) --track-weights=True --train-weights-freq=10000 --random-rotation=False --trainpbar=True > train-log.txt 2> train-err.txt
 	
