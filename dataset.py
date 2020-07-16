@@ -60,7 +60,7 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         self.random_rotation = random_rotation
         self.remaining_classes = []
         self.length = length
-        padding = 224 - image_size[1]
+        padding = (224 - image_size[1]) / 4
         padding = (floor(padding), floor(padding), ceil(padding), ceil(padding))
         self.preprocess_image = transforms.Compose([
                 transforms.Resize(image_size[1:]),
@@ -144,6 +144,7 @@ class MiniImageNetMetaLearning(MetaLearningDataset):
         if random_rotation:
             print('warning: random rotation will be set to False because not used in MiniImageNet Dataset')
         super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, False, image_size=[3, 84, 84], length=length)
+        self.image_size = [3, 224, 224]
 
 
 
