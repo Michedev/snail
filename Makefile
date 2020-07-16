@@ -19,16 +19,17 @@ clean-all-omniglot: clean-log-omniglot clean-model-omniglot
 clean-model-all: clean-miniimagenet-model clean-omniglot-model
 
 
-n = 5
-k = 1
 epochs = 100
 batchsize = 16
 trainsize = 30000
 lr = 3e-4
+device = cuda:1
+testsize = 64
+trackweightssteps = 10000
 
 train-miniimagenet-n5-k1:
-	python3 train.py --dataset='miniimagenet' --n=$n --k=$k --epochs=$(epochs) --batch-size=$(batchsize) --trainsize=$(trainsize) --testsize=64 --device='cuda:1' --evalength=64 --lr=$(lr) --track-weights=True --train-weights-freq=10000 --random-rotation=False --trainpbar=True
+	python3 train.py --dataset='miniimagenet' --n=5 --k=1 --epochs=$(epochs) --batch-size=$(batchsize) --trainsize=$(trainsize) --device='$(device)' --evalength=$(testsize) --lr=$(lr) --track-weights=True --train-weights-freq=$(trackweightssteps) --random-rotation=False --trainpbar=True
 	
 train-miniimagenet-n5-k1-with-log:
-	python3 train.py --dataset='miniimagenet' --n=$n --k=$k --epochs=$(epochs) --batch-size=$(batchsize) --trainsize=$(trainsize) --testsize=64 --device='cuda:1' --evalength=64 --lr=$(lr) --track-weights=True --train-weights-freq=10000 --random-rotation=False --trainpbar=True > train-log.txt 2> train-err.txt
+	python3 train.py --dataset='miniimagenet' --n=5 --k=1 --epochs=$(epochs) --batch-size=$(batchsize) --trainsize=$(trainsize) --device='$(device)' --evalength=$(testsize) --lr=$(lr) --track-weights=True --train-weights-freq=$(trackweightssteps) --random-rotation=False --trainpbar=True > train-log.txt 2> train-err.txt
 	
