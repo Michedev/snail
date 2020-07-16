@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 import torch
 from random import sample, randint, shuffle
-
+from math import ceil, floor
 from path import Path
 import wget
 from skimage import io, transform
@@ -60,10 +60,12 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         self.random_rotation = random_rotation
         self.remaining_classes = []
         self.length = length
+        padding = 224 - image_size[1]
+        padding = [floor(padding), floor(padding), ceil(padding), ceil(padding)]
         self.preprocess_image = transforms.Compose([
                 transforms.Resize(image_size[1:]),
                 transforms.ColorJitter(.2,.2,.2,.2 ),
-                transforms.Pad(224 - image_size[1], fill=0, padding_mode='constant'),
+                transforms.Pad(padding, fill=0, padding_mode='constant'),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             ])
