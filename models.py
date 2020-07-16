@@ -75,7 +75,7 @@ class Snail(Module):
     def forward(self, X, y):
         batch_size = X.shape[0]
         y = y.permute(0, 2, 1) # bs x n x t
-        X = X.reshape(X.size(0) * X.size(1), X.size(4), X.size(2), X.size(3)) # batch x channel x w x h
+        X = X.reshape(X.size(0) * X.size(1), X.size(2), X.size(3), X.size(4))  # batch x channel x w x h
         X_embedding = self.embedding_network(X)
         X_embedding = X_embedding.reshape(batch_size, X_embedding.size(1), self.t) # batch x channel x t
         X_embedding = torch.cat([X_embedding, y], dim=1) # batch x (channel + n) x t
