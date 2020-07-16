@@ -37,6 +37,7 @@ class SnailTrain:
                             Dropout(0.8), LeakyReLU(), 
                             Linear(1000, 384))
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.lr_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt, 'max', factor=0.1, patience=5)
         self.loss = CrossEntropyLoss(reduction='mean')
         self.track_layers = track_layers
         self.track_loss = track_loss
@@ -112,6 +113,8 @@ class SnailTrain:
         def log_stats(engine):
             mean_loss = engine.state.sum_loss / engine.state.steps
             mean_acc = engine.state.sum_acc / engine.state.steps
+            if not is_train:
+                self.lr_plateau.step(mean_acc)
             logger.add_scalar(f'epoch_loss/{label}', mean_loss, epoch)
             logger.add_scalar(f'epoch_acc/{label}', mean_acc, epoch)
             print(label, 'epoch loss', mean_loss.item())
