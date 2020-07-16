@@ -3,7 +3,7 @@ from multiprocessing import cpu_count
 
 import torch
 from ignite.engine import Engine, Events
-from torch.nn import CrossEntropyLoss
+from torch.nn import CrossEntropyLoss, Sequential, Linear, ReLU, BatchNorm1d, Dropout, LeakyReLU
 from ignite.metrics import RunningAverage
 from torch.utils.data import DataLoader, RandomSampler
 from torch.utils.tensorboard import SummaryWriter
@@ -11,7 +11,7 @@ from datetime import datetime
 from ignite.contrib.handlers.tqdm_logger import ProgressBar
 from dataset import OmniglotMetaLearning, MiniImageNetMetaLearning
 from models import Snail
-from paths import WEIGHTSFOLDER
+from paths import WEIGHTSFOLDER, PRETRAINED_EMBEDDING_PATH
 
 
 class SnailTrain:
@@ -29,6 +29,13 @@ class SnailTrain:
         self.ohe_matrix = torch.eye(n)
         self.model = Snail(n, k, dataset)
         self.model = self.model.to(self.device)
+        if self.is_miniimagenet:
+            self.model.embedding_network.load_state_dict(torch.load(PRETRAINED_EMBEDDING_PATH, map_location=self.device))
+            self.model.embedding_network = \
+                 Sequential(self.model.embedding_network,
+                            Linear(384, 1000), BatchNorm1d(1000), 
+                            Dropout(0.8), LeakyReLU(), 
+                            Linear(1000, 384))
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.loss = CrossEntropyLoss(reduction='mean')
         self.track_layers = track_layers

@@ -7,19 +7,14 @@ from collections import OrderedDict
 from ignite.metrics import Accuracy, Loss
 from ignite.engine import create_supervised_trainer, Events, create_supervised_evaluator
 from itertools import chain
-from paths import MINIIMAGENETFOLDER, WEIGHTSFOLDER
+from paths import MINIIMAGENETFOLDER, WEIGHTSFOLDER, TRAIN_MINIIMAGENET, \
+                  PRETRAIN, PRETRAINED_EMBEDDING_CLASSIFIER_PATH, PRETRAINED_EMBEDDING_PATH
 from PIL import Image
 from ignite.metrics import RunningAverage
 from torchvision import transforms
 from ignite.contrib.handlers.tqdm_logger import ProgressBar
 from fire import Fire
 
-
-TRAIN_MINIIMAGENET = MINIIMAGENETFOLDER / 'train'
-PRETRAINING: Path = WEIGHTSFOLDER / 'embedding-pretraining'
-PRETRAINING.mkdir_p()
-EMBEDDING_PATH = PRETRAINING / 'embedding_miniimagenet.pth'
-EMBEDDING_CLASSIFIER_PATH = PRETRAINING / 'embedding_classifier_miniimagenet.pth'
 
 class SupervisedMiniImagenet(torch.utils.data.Dataset):
     
@@ -86,8 +81,8 @@ def train_model(model, classes, device, epochs, batch_size):
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def save_embedding(engine):
-        torch.save(model[0].state_dict(), EMBEDDING_PATH)
-        torch.save(model.state_dict(), EMBEDDING_CLASSIFIER_PATH)
+        torch.save(model[0].state_dict(), PRETRAINED_EMBEDDING_PATH)
+        torch.save(model.state_dict(), PRETRAINED_EMBEDDING_CLASSIFIER_PATH)
 
     trainer.run(train_loader, max_epochs=epochs)
 
@@ -97,9 +92,9 @@ def main(epochs, batch_size, device='cuda'):
     train_classes = TRAIN_MINIIMAGENET.dirs()
     model = build_model_pretraining(len(train_classes))
     model = model.to(device)
-    if EMBEDDING_CLASSIFIER_PATH.exists():
-        model.load_state_dict(torch.load(EMBEDDING_CLASSIFIER_PATH, map_location=torch.device(device)))
-        print('loaded embedding from', EMBEDDING_CLASSIFIER_PATH)
+    if PRETRAINED_EMBEDDING_CLASSIFIER_PATH.exists():
+        model.load_state_dict(torch.load(PRETRAINED_EMBEDDING_CLASSIFIER_PATH, map_location=torch.device(device)))
+        print('loaded embedding from', PRETRAINED_EMBEDDING_CLASSIFIER_PATH)
     train_model(model, train_classes, device, epochs, batch_size)
 
 if __name__ == "__main__":
