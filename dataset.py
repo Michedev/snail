@@ -136,21 +136,16 @@ class OmniglotMetaLearning(MetaLearningDataset):
 class MiniImageNetMetaLearning(MetaLearningDataset):
 
     def __init__(self, class_pool, n, k, random_rotation, length=None):
-        image_size = [3, 84, 84]
+        image_size = [3, 224, 224]
         if random_rotation:
             print('warning: random rotation will be set to False because not used in MiniImageNet Dataset')
         super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, False, image_size=image_size, length=length)
-        padding = (224 - image_size[1]) / 2
-        padding = (floor(padding), floor(padding), ceil(padding), ceil(padding))
         self.preprocess_image = transforms.Compose([
                 transforms.Resize(image_size[1:]),
-                transforms.ColorJitter(.2,.2,.2,.2 ),
-                transforms.Pad(padding, fill=0, padding_mode='constant'),
+                transforms.ColorJitter(.2,.2,.2,.2),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             ])
-        self.image_size = [3, 224, 224]
-
 
 def load_and_transform(name_image, rotation, image_size):
     assert len(image_size) == 3
