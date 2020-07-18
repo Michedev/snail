@@ -25,7 +25,7 @@ def main(dataset='omniglot',
                  random_rotation=False, length=n_sample)
     else:
         test_classes = (MINIIMAGENETFOLDER / 'test').dirs()
-        data = MiniImageNetMetaLearning(test_classes, n, k, False, length=n_sample)
+        data = MiniImageNetMetaLearning(test_classes, n, k, False, length=n_sample, colorjitter=False)
     data_loader = DataLoader(data, batch_size=batch_size, pin_memory=use_cuda, drop_last=True)
     snail = Snail(n, k, dataset)
     snail.load_state_dict(torch.load(snail.path, map_location=torch.device(device)))
