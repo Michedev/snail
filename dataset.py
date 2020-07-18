@@ -28,12 +28,14 @@ def sample_batch(batch_size, train_classes, t, n, k, random_rotation=True, ohe_m
         for i_class in range(n):
             name_images = sample(batch_classes[i_batch][i_class].files(), k)
             image_names_batch += name_images
-            y[i_batch, i_class * k: (i_class + 1) * k] = ohe_matrix[[i_class] * k]
+            y[i_batch, i_class * k: (i_class + 1) *
+              k] = ohe_matrix[[i_class] * k]
             rotation = 0 if not random_rotation else 90 * randint(0, 3)
             rotations[i_class] = rotation
             for i_img, name_image in enumerate(name_images):
                 img = load_and_transform(name_image, rotation, X.shape[1:])
-                X[i_batch, i_class * k + i_img, :, :, :] = torch.from_numpy(img).unsqueeze(-1)
+                X[i_batch, i_class * k + i_img, :, :,
+                    :] = torch.from_numpy(img).unsqueeze(-1)
                 del img
         i_last_class = randint(0, n - 1)
         last_class = batch_classes[i_batch][i_last_class]
@@ -61,14 +63,15 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         self.remaining_classes = []
         self.length = length
         self.preprocess_image = transforms.Compose([
-                transforms.Resize(image_size[1:]),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ])
+            transforms.Resize(image_size[1:]),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                                 0.229, 0.224, 0.225]),
+        ])
 
     def __len__(self):
         return len(self.class_pool) // self.n - 1 if self.length is None else self.length
-        
+
     def __getitem__(self, i):
         if len(self.remaining_classes) < self.n:
             self.remaining_classes = self.class_pool[:]
@@ -79,8 +82,10 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         t = n * self.k + 1
         X = torch.zeros([t] + self.image_size)
         y = torch.zeros(t, n)
-        image_names_batch, rotations, X, y = self.fit_train_task(X, y, sampled_classes)
-        i_last_class = self.fit_last_image(X, sampled_classes, image_names_batch, rotations)
+        image_names_batch, rotations, X, y = self.fit_train_task(
+            X, y, sampled_classes)
+        i_last_class = self.fit_last_image(
+            X, sampled_classes, image_names_batch, rotations)
         return X, y, i_last_class
 
     def shuffle(self):
@@ -92,7 +97,8 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         for i_class, class_name in enumerate(classes):
             name_images = sample(class_name.files(), self.k)
             image_names_batch += name_images
-            y[i_class * self.k: (i_class + 1) * self.k, :] = self.ohe[[i_class] * self.k]
+            y[i_class * self.k: (i_class + 1) * self.k,
+              :] = self.ohe[[i_class] * self.k]
             rotation = 0 if not self.random_rotation else 90 * randint(0, 3)
             rotations[i_class] = rotation
             for i_img, name_image in enumerate(name_images):
@@ -124,28 +130,33 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         return i_last_class
 
 
-
-
-
 class OmniglotMetaLearning(MetaLearningDataset):
 
     def __init__(self, class_pool, n, k, random_rotation, length=None):
-        super(OmniglotMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[1, 28, 28], length=length)
+        super(OmniglotMetaLearning, self).__init__(class_pool, n, k,
+                                                   random_rotation, image_size=[1, 28, 28], length=length)
 
 
 class MiniImageNetMetaLearning(MetaLearningDataset):
 
-    def __init__(self, class_pool, n, k, random_rotation, length=None):
+    def __init__(self, class_pool, n, k, random_rotation, length=None, colorjitter=True):
         image_size = [3, 224, 224]
         if random_rotation:
-            print('warning: random rotation will be set to False because not used in MiniImageNet Dataset')
-        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, False, image_size=image_size, length=length)
-        self.preprocess_image = transforms.Compose([
-                transforms.Resize(image_size[1:]),
-                transforms.ColorJitter(.05, .05, .05, .05),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ])
+            print(
+                'warning: random rotation will be set to False because not used in MiniImageNet Dataset')
+        super(MiniImageNetMetaLearning, self).__init__(
+            class_pool, n, k, False, image_size=image_size, length=length)
+        preprocess_steps = [
+            transforms.Resize(image_size[1:]),
+            transforms.ColorJitter(.05, .05, .05, .05),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                                 0.229, 0.224, 0.225]),
+        ]
+        if not colorjitter:
+            preprocess_steps.pop(1)
+        self.preprocess_image = transforms.Compose(preprocess_steps)
+
 
 def load_and_transform(name_image, rotation, image_size):
     assert len(image_size) == 3
@@ -180,9 +191,11 @@ def pull_data_omniglot(force):
     if force or not OMNIGLOTFOLDER.exists():
         archives = ['images_background', 'images_evaluation']
         for archive_name in archives:
-            wget.download(f'https://github.com/brendenlake/omniglot/raw/master/python/{archive_name}.zip')
+            wget.download(
+                f'https://github.com/brendenlake/omniglot/raw/master/python/{archive_name}.zip')
         if OMNIGLOTFOLDER.exists():
-            for el in OMNIGLOTFOLDER.files(): el.remove()
+            for el in OMNIGLOTFOLDER.files():
+                el.remove()
         OMNIGLOTFOLDER.makedirs_p()
         for archive in archives:
             with zipfile.ZipFile(f'{archive}.zip') as z:
