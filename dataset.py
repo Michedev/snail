@@ -142,7 +142,7 @@ class MiniImageNetMetaLearning(MetaLearningDataset):
         super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, False, image_size=image_size, length=length)
         self.preprocess_image = transforms.Compose([
                 transforms.Resize(image_size[1:]),
-                transforms.ColorJitter(.05,.05,.05,.05),
+                transforms.ColorJitter(.05, .05, .05, .05),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             ])
