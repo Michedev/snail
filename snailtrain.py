@@ -14,6 +14,22 @@ from models import Snail
 from paths import WEIGHTSFOLDER
 
 
+class ModelSaver:
+
+    def __init__(self, model, savepath: Path, mode='min'):
+        assert mode in ['min', 'max']
+        assert savepath.endswith('.pth')
+        self.model = model
+        self.mode = mode
+        self.best_value = -float('inf') if mode == 'max' else float('inf')
+        self.savepath = savepath
+
+    def step(self, curr_value):
+        if curr_value > self.best_value:
+            self.best_value = curr_value
+            torch.save(self.model.state_dict(), self.savepath)
+
+
 class SnailTrain:
 
     def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
@@ -34,6 +50,8 @@ class SnailTrain:
         self.lr_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt, 'max', factor=0.5)
         self.track_layers = track_layers
         self.track_loss = track_loss
+        best_model_path = WEIGHTSFOLDER / (self.model.fname.replace('snail', 'snail_best_test'))
+        self.saver = ModelSaver(self.model, best_model_path, mode='max')
         self.logger = SummaryWriter('tb/log_' + dataset + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")) \
                         if self.track_layers or self.track_loss else None
         self.freq_track_layers = freq_track_layers
@@ -108,6 +126,7 @@ class SnailTrain:
             mean_acc = engine.state.sum_acc / engine.state.steps
             if not is_train:
                 self.lr_plateau.step(mean_acc)
+                self.saver.step(mean_acc)
             logger.add_scalar(f'epoch_loss/{label}', mean_loss, epoch)
             logger.add_scalar(f'epoch_acc/{label}', mean_acc, epoch)
             print(label, 'epoch loss', mean_loss.item())
