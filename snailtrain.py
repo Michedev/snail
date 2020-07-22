@@ -12,6 +12,7 @@ from ignite.contrib.handlers.tqdm_logger import ProgressBar
 from dataset import OmniglotMetaLearning, MiniImageNetMetaLearning
 from models import Snail
 from paths import WEIGHTSFOLDER
+from path import Path
 
 
 class ModelSaver:
