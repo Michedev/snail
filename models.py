@@ -1,5 +1,6 @@
 from modules import *
 from torch.nn import Module
+from paths import WEIGHTSFOLDER
 
 
 def build_embedding_network_omniglot():
