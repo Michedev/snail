@@ -50,7 +50,7 @@ def build_snail_omniglot(n, t):
 
 
 def build_snail_miniimagenet(n, t):
-    return build_snail(384, n, t)
+    return build_snail(100, n, t)
 
 
 class Snail(Module):
@@ -66,7 +66,7 @@ class Snail(Module):
             self.snail = build_snail_omniglot(n, t)
         else:
             self.snail = build_snail_miniimagenet(n, t)
-            self.embedding_network = Sequential(torch.hub.load('pytorch/vision:v0.6.0', 'mobilenet_v2', pretrained=True), BatchNorm1d(1000), Dropout(0.8), LeakyReLU(.3), Linear(1000, 384))
+            self.embedding_network = Sequential(torch.hub.load('pytorch/vision:v0.6.0', 'mobilenet_v2', pretrained=True), BatchNorm1d(1000), Dropout(0.8), LeakyReLU(.3), Linear(1000, 100))
         self.dataset = dataset
         self.fname = f'snail_{dataset}_{n}_{k}.pth'
         self.path = WEIGHTSFOLDER / self.fname
