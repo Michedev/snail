@@ -70,6 +70,7 @@ class Snail(Module):
         self.dataset = dataset
         self.fname = f'snail_{dataset}_{n}_{k}.pth'
         self.path = WEIGHTSFOLDER / self.fname
+        self.path_best = WEIGHTSFOLDER / self.fname.replace('snail', 'snail_best_test')
         self.t = t
 
     def forward(self, X, y):

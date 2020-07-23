@@ -22,7 +22,7 @@ clean-model-all: clean-miniimagenet-model clean-omniglot-model
 epochs = 100
 batchsize = 16
 trainsize = 30000
-lr = 3e-4
+lr = 10e-5
 device = cuda:1
 testsize = 64
 trackweightssteps = 10000

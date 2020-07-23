@@ -51,8 +51,7 @@ class SnailTrain:
         self.lr_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt, 'max', factor=0.5)
         self.track_layers = track_layers
         self.track_loss = track_loss
-        best_model_path = WEIGHTSFOLDER / (self.model.fname.replace('snail', 'snail_best_test'))
-        self.saver = ModelSaver(self.model, best_model_path, mode='max')
+        self.saver = ModelSaver(self.model, self.model.path_best, mode='max')
         self.logger = SummaryWriter('tb/log_' + dataset + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")) \
                         if self.track_layers or self.track_loss else None
         self.freq_track_layers = freq_track_layers
