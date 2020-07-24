@@ -29,7 +29,12 @@ trackweightssteps = 10000
 
 train-miniimagenet-n5-k1:
 	python3 train.py --dataset='miniimagenet' --n=5 --k=1 --epochs=$(epochs) --batch-size=$(batchsize) --trainsize=$(trainsize) --testsize=$(testsize) --device='$(device)' --evalength=$(testsize) --lr=$(lr) --track-weights=True --train-weights-freq=$(trackweightssteps) --random-rotation=False --trainpbar=True
-	
+
+
 train-miniimagenet-n5-k1-with-log:
 	python3 train.py --dataset='miniimagenet' --n=5 --k=1 --epochs=$(epochs) --batch-size=$(batchsize) --trainsize=$(trainsize) --testsize=$(testsize) --device='$(device)' --evalength=$(testsize) --lr=$(lr) --track-weights=True --train-weights-freq=$(trackweightssteps) --random-rotation=False --trainpbar=True > train-log.txt 2> train-err.txt
-	
+
+batchsize = 8
+
+train-miniimagenet-n5-k5:
+	python3 train.py --dataset='miniimagenet' --n=5 --k=5 --epochs=$(epochs) --batch-size=$(batchsize) --trainsize=$(trainsize) --testsize=$(testsize) --device='$(device)' --evalength=$(testsize) --lr=$(lr) --track-weights=True --train-weights-freq=$(trackweightssteps) --random-rotation=False --trainpbar=True
