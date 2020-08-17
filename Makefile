@@ -19,7 +19,7 @@ clean-all-omniglot: clean-log-omniglot clean-model-omniglot
 clean-model-all: clean-miniimagenet-model clean-omniglot-model
 
 train-miniimagenet-n5-k1:
-	python3 train.py --dataset='miniimagenet' --n=5 --k=1 --epochs=100 --batch-size=8 --trainsize=10000 --testsize=64 --device='cuda:0' --evalength=64 --lr=10e-4 --track-weights=True --train-weights-freq=1000 --random-rotation=False --trainpbar=False
+	python3 train.py --dataset='miniimagenet' --n=5 --k=1 --epochs=100 --batch-size=8 --trainsize=10000 --testsize=64 --device='cuda:0' --evalength=64 --lr=10e-4 --track-weights=True --train-weights-freq=1000 --random-rotation=False --trainpbar=True
 
 
 train-miniimagenet-n5-k5:
