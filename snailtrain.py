@@ -130,10 +130,8 @@ class SnailTrain:
         X_test = X_test[:, 0].unsqueeze(1).to(self.device)
         y_last = y_last[:, 0].unsqueeze(1).to(self.device)
         y_train_ohe = self.ohe_matrix[y_train]
-        print(y_last)
         with torch.set_grad_enabled(grad):
             p_yhat_last = self.model(X_train, y_train_ohe, X_test) # bs x n
-            print(p_yhat_last)
             loss_value = self.loss(p_yhat_last, y_last.squeeze(1))
         if not also_accuracy:
             return loss_value

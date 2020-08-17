@@ -29,7 +29,7 @@ def build_embedding_network_miniimagenet():
 def build_snail(in_filters, n, t):
     log2_t = int(ceil(log2(t)))
     model = Sequential()
-    softmax = Softmax(dim=1)
+    softmax = LogSoftmax(dim=1)
     filters = in_filters + n # bs x (n + in_filters) x t
     model.add_module('attn1', AttentionBlock(filters, 64, 32))  # bs x (n + in_filters + 32) x t
     filters += 32
