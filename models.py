@@ -1,6 +1,5 @@
 from modules import *
 from torch.nn import Module
-from paths import WEIGHTSFOLDER
 
 
 def build_embedding_network_omniglot():
@@ -20,8 +19,8 @@ def build_embedding_network_miniimagenet():
         ResidualBlockImageNet(128, 256)
     )
     network = Sequential(residual_layers, Conv2d(256, 2048, kernel_size=1),
-                         ConstantPad2d(((0, 1, 0, 1)), 0), AvgPool2d(6), ReLU(),
-                         Flatten(1), Dropout(0.9), Linear(2048, 384))
+                         AvgPool2d(5), ReLU(), Flatten(1),
+                         Dropout(0.9), Linear(2048, 384))
     return network
 
 
@@ -68,18 +67,17 @@ class Snail(Module):
             self.snail = build_snail_miniimagenet(n, t)
             self.embedding_network = build_embedding_network_miniimagenet()
         self.dataset = dataset
-        self.fname = f'snail_{dataset}_{n}_{k}.pth'
-        self.path = WEIGHTSFOLDER / self.fname
         self.t = t
 
-    def forward(self, X, y):
-        batch_size = X.shape[0]
-        y = y.permute(0, 2, 1) # bs x n x t
-        X = X.reshape(X.size(0) * X.size(1), X.size(2), X.size(3), X.size(4)) # batch x channel x w x h
+    def forward(self, X_train, y_train, X_test):
+        batch_size = X_train.shape[0]
+        y_train = y_train.permute(0, 2, 1) # bs x n x t
+        X = torch.cat([X_train, X_test], dim=1)
+        y_null_test = torch.zeros(y_train.shape[:-1] + [1])
+        y = torch.cat([y_train, y_null_test], dim=-1)
         X_embedding = self.embedding_network(X)
-        X_embedding = X_embedding.reshape(batch_size, X_embedding.size(1), self.t) # batch x channel x t
-        X_embedding = torch.cat([X_embedding, y], dim=1) # batch x (channel + n) x t
-        yhat = self.snail(X_embedding)
+        X_train_embedding = torch.cat([X_embedding, y], dim=1) # batch x (channel + n) x t
+        yhat = self.snail(X_train_embedding)[:, :, -1]
         return yhat
 
 
