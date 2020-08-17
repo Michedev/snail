@@ -42,9 +42,9 @@ def main(dataset='omniglot', n=5, k=5, trainsize=None, valsize=None, epochs=200,
     np.random.seed(seed)
     set_seed(seed)
     if dataset == 'omniglot':
-        dataloader = OmniglotDataLoader(batch_size, n, k, 1, trainsize, valsize, valsize, device)
+        dataloader = OmniglotDataLoader(batch_size, n, k, 1, device)
     else:
-        dataloader = MiniImagenetDataLoader(batch_size, n, k, 1, trainsize, valsize, valsize, device)
+        dataloader = MiniImagenetDataLoader(batch_size, n, k, 1, device)
     model = SnailTrain(n, k, dataset, device=device, track_loss=use_tensorboard,
                        track_layers=track_weights and use_tensorboard, track_loss_freq=track_loss_freq,
                        track_params_freq=track_weights_freq, random_rotation=random_rotation, lr=lr,
