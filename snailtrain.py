@@ -58,16 +58,16 @@ class SnailTrain:
         self.trainpbar = trainpbar
         self.track_params_freq = track_params_freq
 
-    def train(self, epochs: int, train_loader, test_loader=None):
+    def train(self, epochs: int, train_loader, test_loader=None, trainsize=None, valsize=None):
         self.model.train()
         train_engine = Engine(lambda e, b: self.train_step(b))
 
         @train_engine.on(Events.EPOCH_COMPLETED(every=self.track_loss_freq))
         def eval_test(engine):
             if self.track_loss:
-                self.tb_log(train_loader, self.logger, engine.state.epoch, is_train=True)
+                self.tb_log(train_loader, self.logger, engine.state.epoch, is_train=True, eval_length=valsize)
                 if test_loader is not None:
-                    self.tb_log(test_loader, self.logger, engine.state.epoch, is_train=False)
+                    self.tb_log(test_loader, self.logger, engine.state.epoch, is_train=False, eval_length=valsize)
 
         @train_engine.on(Events.EPOCH_COMPLETED)
         def save_state(engine):
@@ -85,7 +85,7 @@ class SnailTrain:
             RunningAverage(output_transform=lambda x: x).attach(train_engine, 'loss')
             p = ProgressBar()
             p.attach(train_engine, ['loss'])
-        train_engine.run(train_loader, max_epochs=epochs)
+        train_engine.run(train_loader, max_epochs=epochs, epoch_length=trainsize)
 
     def tb_log(self, dataloader, logger, epoch, is_train, eval_length=None):
         eval_engine = Engine(lambda engine, batch: self.test_step(batch, also_accuracy=True, grad=False))

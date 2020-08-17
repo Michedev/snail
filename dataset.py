@@ -52,10 +52,7 @@ def get_test_omniglot(n: int, k_train: int, k_test: int):
 class MetaLearningDataLoader(ABC):
 
     def __init__(self, batch_size: int, n: int, n_s: int, n_q: int,
-                 train_len: int, val_len: int, test_len: int, device: str, num_workers: int = None):
-        self.train_len = train_len
-        self.val_len = val_len
-        self.test_len = test_len
+                 device: str, num_workers: int = None):
         self.n_s = n_s
         self.n_q = n_q
         self.n = n

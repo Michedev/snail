@@ -8,8 +8,8 @@ from paths import ROOT, OMNIGLOTFOLDER, MINIIMAGENETFOLDER
 from snailtrain import SnailTrain
 
 
-def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200, batch_size=32, lr=10e-4,
-         random_rotation=True, seed=13, force_download=False, device='cuda', 
+def main(dataset='omniglot', n=5, k=5, trainsize=None, valsize=None, epochs=200, batch_size=32, lr=10e-4,
+         random_rotation=True, seed=13, force_download=False, device='cuda',
          use_tensorboard=True, eval_test=True, track_loss_freq=1,
          track_weights=True, track_weights_freq=100, load_weights=True,
          evalength=None, trainpbar=True):
@@ -42,16 +42,16 @@ def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200
     np.random.seed(seed)
     set_seed(seed)
     if dataset == 'omniglot':
-        dataloader = OmniglotDataLoader(batch_size, n, k, 1, trainsize, testsize, testsize, device)
+        dataloader = OmniglotDataLoader(batch_size, n, k, 1, trainsize, valsize, valsize, device)
     else:
-        dataloader = MiniImagenetDataLoader(batch_size, n, k, 1, trainsize, testsize, testsize, device)
+        dataloader = MiniImagenetDataLoader(batch_size, n, k, 1, trainsize, valsize, valsize, device)
     model = SnailTrain(n, k, dataset, device=device, track_loss=use_tensorboard,
                        track_layers=track_weights and use_tensorboard, track_loss_freq=track_loss_freq,
                        track_params_freq=track_weights_freq, random_rotation=random_rotation, lr=lr,
                        trainpbar=trainpbar)
     if load_weights:
         model.load_if_exists()
-    model.train(epochs, dataloader.train_dataloader(), dataloader.val_dataloader())
+    model.train(epochs, dataloader.train_dataloader(), dataloader.val_dataloader(), trainsize, valsize)
 
 
 if __name__ == '__main__':
