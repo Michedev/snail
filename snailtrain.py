@@ -1,14 +1,12 @@
-from itertools import chain
-from multiprocessing import cpu_count
-
-import torch
-from ignite.engine import Engine, Events, create_supervised_evaluator, create_supervised_trainer
-from torch.nn import CrossEntropyLoss, NLLLoss
-from ignite.metrics import RunningAverage
-from torch.utils.data import DataLoader, RandomSampler
-from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+from path import Path
+import torch
 from ignite.contrib.handlers.tqdm_logger import ProgressBar
+from ignite.engine import Engine, Events
+from ignite.metrics import RunningAverage
+from torch.nn import NLLLoss
+from torch.utils.tensorboard import SummaryWriter
+
 from models import Snail
 from paths import WEIGHTSFOLDER
 
