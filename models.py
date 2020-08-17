@@ -78,7 +78,7 @@ class Snail(Module):
         batch_size = X_train.shape[0]
         y_train = y_train.permute(0, 2, 1) # bs x n x t
         X = torch.cat([X_train, X_test], dim=1)
-        y_null_test = torch.zeros(y_train.shape[:-1] + [1])
+        y_null_test = torch.zeros(list(y_train.shape[:-1]) + [1]).to(y_train.device)
         y = torch.cat([y_train, y_null_test], dim=-1)
         X_embedding = self.embedding_network(X)
         X_train_embedding = torch.cat([X_embedding, y], dim=1) # batch x (channel + n) x t

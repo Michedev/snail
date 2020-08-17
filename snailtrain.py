@@ -127,6 +127,7 @@ class SnailTrain:
         X_test, y_last = batch['test']
         X_train = X_train.to(self.device)
         y_train = y_train.to(self.device)
+        X_test = X_test.to(self.device)
         y_last = y_last.to(self.device)
         y_train_ohe = self.ohe_matrix[y_train]
         with torch.set_grad_enabled(grad):
