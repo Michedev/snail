@@ -1,10 +1,9 @@
 import numpy as np
 
-from dataset import get_train_test_classes, pull_data_omniglot, pull_data_miniimagenet
 from fire import Fire
 from random import seed as set_seed
 import torch
-
+from dataset import OmniglotDataLoader, MiniImagenetDataLoader
 from paths import ROOT, OMNIGLOTFOLDER, MINIIMAGENETFOLDER
 from snailtrain import SnailTrain
 
@@ -43,30 +42,16 @@ def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200
     np.random.seed(seed)
     set_seed(seed)
     if dataset == 'omniglot':
-        pull_data_omniglot(force_download)
-        classes = list(OMNIGLOTFOLDER.glob('*/*/'))
-        train_classes_file = ROOT / f'train_classes_{dataset}.txt'
-        test_classes_file = ROOT / f'test_classes_{dataset}.txt'
-        train_classes, test_classes = get_train_test_classes(classes, test_classes_file, train_classes_file, 1200)
+        dataloader = OmniglotDataLoader(batch_size, n, k, 1, trainsize, testsize, testsize, device)
     else:
-        pull_data_miniimagenet(force_download)
-        train_classes = (MINIIMAGENETFOLDER / 'train').dirs()
-        test_classes = (MINIIMAGENETFOLDER / 'test').dirs()
-    print('train classes', len(train_classes))
-    print('test classes', len(test_classes))
+        dataloader = MiniImagenetDataLoader(batch_size, n, k, 1, trainsize, testsize, testsize, device)
     model = SnailTrain(n, k, dataset, device=device, track_loss=use_tensorboard,
                        track_layers=track_weights and use_tensorboard, track_loss_freq=track_loss_freq,
                        track_params_freq=track_weights_freq, random_rotation=random_rotation, lr=lr,
                        trainpbar=trainpbar)
     if load_weights:
         model.load_if_exists()
-    test_classes = None if not eval_test else test_classes
-    model.train(epochs, batch_size, train_classes,
-                test_classes, trainsize, testsize, evalength)
-    with open('train_classes.txt', 'w') as f:
-        f.write(', '.join(train_classes))
-    with open('test_classes.txt', 'w') as f:
-        f.write(', '.join(test_classes))
+    model.train(epochs, dataloader.train_dataloader(), dataloader.val_dataloader())
 
 
 if __name__ == '__main__':

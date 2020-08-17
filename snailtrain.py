@@ -2,16 +2,31 @@ from itertools import chain
 from multiprocessing import cpu_count
 
 import torch
-from ignite.engine import Engine, Events
-from torch.nn import CrossEntropyLoss
+from ignite.engine import Engine, Events, create_supervised_evaluator, create_supervised_trainer
+from torch.nn import CrossEntropyLoss, NLLLoss
 from ignite.metrics import RunningAverage
 from torch.utils.data import DataLoader, RandomSampler
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from ignite.contrib.handlers.tqdm_logger import ProgressBar
-from dataset import OmniglotMetaLearning, MiniImageNetMetaLearning
 from models import Snail
 from paths import WEIGHTSFOLDER
+
+
+class ModelSaver:
+
+    def __init__(self, model, savepath: Path, mode='min'):
+        assert mode in ['min', 'max']
+        assert savepath.endswith('.pth')
+        self.model = model
+        self.mode = mode
+        self.best_value = -float('inf') if mode == 'max' else float('inf')
+        self.savepath = savepath
+
+    def step(self, curr_value):
+        if curr_value > self.best_value:
+            self.best_value = curr_value
+            torch.save(self.model.state_dict(), self.savepath)
 
 
 class SnailTrain:
@@ -30,9 +45,12 @@ class SnailTrain:
         self.model = Snail(n, k, dataset)
         self.model = self.model.to(self.device)
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.loss = CrossEntropyLoss(reduction='mean')
+        self.loss = NLLLoss(reduction='mean')
+        self.lr_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt, 'max', factor=0.5)
         self.track_layers = track_layers
         self.track_loss = track_loss
+        best_model_path = WEIGHTSFOLDER / (self.model.fname.replace('snail', 'snail_best_test'))
+        self.saver = ModelSaver(self.model, best_model_path, mode='max')
         self.logger = SummaryWriter('tb/log_' + dataset + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")) \
                         if self.track_layers or self.track_loss else None
         self.freq_track_layers = freq_track_layers
@@ -41,30 +59,16 @@ class SnailTrain:
         self.trainpbar = trainpbar
         self.track_params_freq = track_params_freq
 
-    def train(self, epochs: int, batch_size: int, train_classes, test_classes=None, trainsize=None, testsize=None, eval_length=None):
+    def train(self, epochs: int, train_loader, test_loader=None):
         self.model.train()
-        train_data = OmniglotMetaLearning(train_classes, self.n, self.k,
-                         self.random_rotation, trainsize) if self.is_omniglot else \
-            MiniImageNetMetaLearning(train_classes, self.n, self.k,
-                         self.random_rotation, trainsize)
-        train_loader = DataLoader(train_data, batch_size=batch_size,
-                                  shuffle=True, num_workers=cpu_count(),
-                                  drop_last=True)
-        if test_classes:
-            test_data = OmniglotMetaLearning(test_classes, self.n, self.k, self.random_rotation, testsize) \
-                        if self.is_omniglot else \
-                        MiniImageNetMetaLearning(test_classes, self.n, self.k, self.random_rotation, testsize)
-            test_data.shuffle()
-            test_loader = DataLoader(test_data, shuffle=True, num_workers=cpu_count(),
-                                     batch_size=batch_size, drop_last=True)
-        train_engine = Engine(lambda engine, batch: self.opt_step(*batch, return_accuracy=False))
+        train_engine = Engine(lambda e, b: self.train_step(b))
 
         @train_engine.on(Events.EPOCH_COMPLETED(every=self.track_loss_freq))
         def eval_test(engine):
             if self.track_loss:
-                self.tb_log(train_loader, self.logger, engine.state.epoch, is_train=True, eval_length=eval_length)
-                if test_classes:
-                    self.tb_log(test_loader, self.logger, engine.state.epoch, is_train=False, eval_length=eval_length)
+                self.tb_log(train_loader, self.logger, engine.state.epoch, is_train=True)
+                if test_loader is not None:
+                    self.tb_log(test_loader, self.logger, engine.state.epoch, is_train=False)
 
         @train_engine.on(Events.EPOCH_COMPLETED)
         def save_state(engine):
@@ -85,7 +89,7 @@ class SnailTrain:
         train_engine.run(train_loader, max_epochs=epochs)
 
     def tb_log(self, dataloader, logger, epoch, is_train, eval_length=None):
-        eval_engine = Engine(lambda engine, batch: self.calc_loss(*batch, also_accuracy=True, grad=False))
+        eval_engine = Engine(lambda engine, batch: self.test_step(batch, also_accuracy=True, grad=False))
         label = 'train' if is_train else 'test'
 
         @eval_engine.on(Events.EPOCH_STARTED)
@@ -105,6 +109,9 @@ class SnailTrain:
         def log_stats(engine):
             mean_loss = engine.state.sum_loss / engine.state.steps
             mean_acc = engine.state.sum_acc / engine.state.steps
+            if not is_train:
+                self.lr_plateau.step(mean_acc)
+                self.saver.step(mean_acc)
             logger.add_scalar(f'epoch_loss/{label}', mean_loss, epoch)
             logger.add_scalar(f'epoch_acc/{label}', mean_acc, epoch)
             print(label, 'epoch loss', mean_loss.item())
@@ -116,15 +123,15 @@ class SnailTrain:
         eval_engine.run(dataloader, 1, eval_length)
         self.model.train()
 
-    def calc_loss(self, X, y, y_last, also_accuracy=True, grad=True):
-        X = X.to(self.device)
-        y = y.to(self.device)
+    def test_step(self, batch, also_accuracy=True, grad=True):
+        X_train, y_train = batch['train']
+        X_test, y_last = batch['test']
+        X_train = X_train.to(self.device)
+        y_train = y_train.to(self.device)
         y_last = y_last.to(self.device)
-        for tensor in [X, y, y_last]:
-            tensor.squeeze_(dim=0)
         with torch.set_grad_enabled(grad):
-            yhat = self.model(X, y) # bs x n x t
-            p_yhat_last = yhat[:, :, -1]
+            yhat = self.model(X_train, y_train, X_test) # bs x n x t
+            p_yhat_last = yhat
             loss_value = self.loss(p_yhat_last, y_last)
         if not also_accuracy:
             return loss_value
@@ -132,9 +139,9 @@ class SnailTrain:
         accuracy = (yhat_last == y_last).float().mean()
         return loss_value, accuracy
 
-    def opt_step(self, X, y, y_last, return_accuracy=False):
+    def train_step(self, batch, return_accuracy=False):
         self.opt.zero_grad()
-        loss_value = self.calc_loss(X, y, y_last, return_accuracy, grad=True)
+        loss_value = self.test_step(batch, return_accuracy, grad=True)
         if return_accuracy:
             loss_value, accuracy = loss_value
         loss_value.backward()
