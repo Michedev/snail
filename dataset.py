@@ -7,18 +7,6 @@ from torchvision import transforms
 from torchmeta.transforms.target_transforms import TargetTransform
 from paths import DATAFOLDER
 
-class OheTransform(TargetTransform):
-
-    def __init__(self, n):
-        self.n = n
-        self.ohe = torch.eye(n)
-
-    def __call__(self, target):
-        return self.ohe[target]
-
-
-
-
 def miniimagenet_transforms():
     return transforms.Compose([
         transforms.Resize(84),
@@ -29,8 +17,7 @@ def miniimagenet_transforms():
 
 def get_meta_miniimagenet(n: int, supp_size: int, query_size: int, split: str):
     assert split in ['train', 'val', 'test']
-    return miniimagenet(DATAFOLDER, supp_size, n, test_shots=query_size, meta_split=split,
-                        download=True, target_transform=OheTransform(n))
+    return miniimagenet(DATAFOLDER, supp_size, n, test_shots=query_size, meta_split=split)
 
 
 def get_train_miniimagenet(n: int, supp_size: int, query_size: int):
