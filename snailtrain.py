@@ -44,7 +44,6 @@ class SnailTrain:
         self.model = self.model.to(self.device)
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.loss = NLLLoss(reduction='mean')
-        self.lr_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt, 'max', factor=0.5)
         self.ohe_matrix = torch.eye(n, device=device)
         self.track_layers = track_layers
         self.track_loss = track_loss
@@ -124,19 +123,19 @@ class SnailTrain:
 
     def test_step(self, batch, also_accuracy=True, grad=True):
         X_train, y_train = batch['train']
-        X_test, y_last = batch['test']
+        X_test, y_test = batch['test']
         X_train = X_train.to(self.device)
         y_train = y_train.to(self.device)
-        X_test = X_test[:, 0].unsqueeze(1).to(self.device)
-        y_last = y_last[:, 0].unsqueeze(1).to(self.device)
+        X_test = X_test.to(self.device)
+        y_test = y_test.to(self.device)
         y_train_ohe = self.ohe_matrix[y_train]
         with torch.set_grad_enabled(grad):
             p_yhat_last = self.model(X_train, y_train_ohe, X_test) # bs x n
-            loss_value = self.loss(p_yhat_last, y_last.squeeze(1))
+            loss_value = self.loss(p_yhat_last, y_test.squeeze(1))
         if not also_accuracy:
             return loss_value
         yhat_last = p_yhat_last.argmax(dim=1)
-        accuracy = (yhat_last == y_last).float().mean()
+        accuracy = (yhat_last == y_test).float().mean()
         return loss_value, accuracy
 
     def train_step(self, batch, return_accuracy=False):
