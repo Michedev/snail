@@ -4,7 +4,7 @@ import torch
 from ignite.contrib.handlers.tqdm_logger import ProgressBar
 from ignite.engine import Engine, Events
 from ignite.metrics import RunningAverage
-from torch.nn import NLLLoss
+from torch.nn import NLLLoss, CrossEntropyLoss
 from torch.utils.tensorboard import SummaryWriter
 
 from models import Snail
@@ -43,7 +43,7 @@ class SnailTrain:
         self.model = Snail(n, k, dataset)
         self.model = self.model.to(self.device)
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.loss = NLLLoss(reduction='mean')
+        self.loss = CrossEntropyLoss(reduction='mean')
         self.ohe_matrix = torch.eye(n, device=device)
         self.track_layers = track_layers
         self.track_loss = track_loss
@@ -108,7 +108,6 @@ class SnailTrain:
             mean_loss = engine.state.sum_loss / engine.state.steps
             mean_acc = engine.state.sum_acc / engine.state.steps
             if not is_train:
-                self.lr_plateau.step(mean_acc)
                 self.saver.step(mean_acc)
             logger.add_scalar(f'epoch_loss/{label}', mean_loss, epoch)
             logger.add_scalar(f'epoch_acc/{label}', mean_acc, epoch)
