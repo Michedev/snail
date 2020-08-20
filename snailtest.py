@@ -10,7 +10,7 @@ class Snailtest:
         self.model = model.to(device)
         self.device = device
         self.n = n
-        self.loss_f = loss_f if loss_f is None else CrossEntropyLoss('mean')
+        self.loss_f = loss_f if loss_f is None else CrossEntropyLoss(reduction='mean')
         self.ohe_matrix = torch.eye(n).to(device)
 
     def test_step(self, batch, also_accuracy=True, grad=True, only_test_last=False):
