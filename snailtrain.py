@@ -34,7 +34,7 @@ class SnailTrain(Snailtest):
                  device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True, lr=10e-4,
                  trainpbar=True):
         self.model = Snail(n, k, dataset)
-        self.model = self.model.to(self.device)
+        self.model = self.model.to(device)
         super().__init__(self.model, device, n)
         assert dataset in ['omniglot', 'miniimagenet']
         self.t = n * k + 1
