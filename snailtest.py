@@ -1,4 +1,5 @@
 import torch
+from ignite.contrib.handlers import ProgressBar
 from ignite.engine import Engine, Events
 from torch.nn import CrossEntropyLoss
 
@@ -29,7 +30,7 @@ class Snailtest:
         accuracy = (yhat_last == y_test).float().mean()
         return loss_value, accuracy
 
-    def test(self, test_dataloader, testsize=None, dataset_name='Test'):
+    def test(self, test_dataloader, testsize=None, dataset_name='Test', pbar=False):
         engine = Engine(lambda e, b: self.test_step(b, also_accuracy=True, grad=False, only_test_last=True))
 
         @engine.on(Events.EPOCH_STARTED)
@@ -52,6 +53,9 @@ class Snailtest:
             print(f'{dataset_name} loss = ', mean_loss, '+-', std_loss)
             print(f'{dataset_name} acc', mean_acc, '+-', std_acc)
             return [mean_loss, std_loss, mean_acc, std_acc]
+
+        if pbar:
+            ProgressBar().attach(engine)
 
         self.model.eval()
         engine.run(test_dataloader, 1, testsize)

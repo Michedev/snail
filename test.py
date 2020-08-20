@@ -21,7 +21,7 @@ def main(dataset='omniglot',
     snail.requires_grad_(False)
     loss = torch.nn.CrossEntropyLoss()
     tester = Snailtest(snail, device, n, loss)
-    tester.test(dataloader.test_dataloader(), n_sample)
+    tester.test(dataloader.test_dataloader(), n_sample, pbar=True)
 
 if __name__ == '__main__':
     Fire(main)
