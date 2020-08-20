@@ -33,7 +33,9 @@ class SnailTrain(Snailtest):
     def __init__(self, n: int, k: int, dataset: str, model, track_loss=True, track_layers=True, freq_track_layers=100,
                  device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True, lr=10e-4,
                  trainpbar=True):
-        super().__init__(model, device, n)
+        self.model = Snail(n, k, dataset)
+        self.model = self.model.to(self.device)
+        super().__init__(self.model, device, n)
         assert dataset in ['omniglot', 'miniimagenet']
         self.t = n * k + 1
         self.n = n
@@ -43,8 +45,6 @@ class SnailTrain(Snailtest):
         self.is_omniglot = dataset == 'omniglot'
         self.is_miniimagenet = dataset == 'miniimagenet'
         self.ohe_matrix = torch.eye(n)
-        self.model = Snail(n, k, dataset)
-        self.model = self.model.to(self.device)
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.loss = CrossEntropyLoss(reduction='mean')
         self.ohe_matrix = torch.eye(n, device=device)

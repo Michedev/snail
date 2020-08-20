@@ -11,9 +11,9 @@ def main(dataset='omniglot',
          device='cpu', n_sample=500):
     assert dataset in ['omniglot', 'miniimagenet']
     if dataset == 'omniglot':
-        dataloader = OmniglotDataLoader(batch_size, n, k, 1, device)
+        dataloader = OmniglotDataLoader(batch_size, n, k, device)
     else:
-        dataloader = MiniImagenetDataLoader(batch_size, n, k, 1, device)
+        dataloader = MiniImagenetDataLoader(batch_size, n, k, device)
     snail = Snail(n, k, dataset)
     snail.load_state_dict(torch.load(snail.path, map_location=torch.device(device)))
     print('Loaded', snail.path)
