@@ -84,7 +84,7 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         image_names_batch, rotations, X, y = self.fit_train_task(X, y, sampled_classes)
         i_last_class = self.fit_last_image(X, sampled_classes, image_names_batch, rotations)
         y[-1] = self.ohe[i_last_class]
-        return {'train': (X[:-1], y[:-1]), 'test': (X[-1:], y[-1:])}
+        return X[:-1], y[:-1], X[-1:], y[-1:]
 
     def shuffle(self):
         shuffle(self.class_pool)
@@ -140,14 +140,6 @@ class MiniImageNetMetaLearning(MetaLearningDataset):
         if random_rotation:
             print('warning: random rotation will be set to False because not used in MiniImageNet Dataset')
         super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, False, image_size=[3, 84, 84], length=length)
-
-
-def load_and_transform(name_image, rotation, image_size):
-    assert len(image_size) == 3
-    img = Image.open(name_image)
-    if rotation != 0:
-        img = img.rotate(rotation)
-    return preprocess_image(img)
 
 
 def get_train_test_classes(classes, test_classes_file, train_classes_file, trainsize):

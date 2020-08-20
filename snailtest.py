@@ -17,12 +17,11 @@ class Snailtest:
         self.ohe_matrix = torch.eye(n).to(device)
 
     def test_step(self, batch, also_accuracy=True, grad=True, only_test_last=False):
-        X_train, y_train = batch['train']
-        X_test, y_test = batch['test']
+        X_train, y_train, X_test, y_test = batch
         X_train = X_train.to(self.device)
         y_train = y_train.to(self.device)
-        X_test = X_test.to(self.device) if not only_test_last else X_test[:, :1].to(self.device)
-        y_test = y_test.to(self.device) if not only_test_last else y_test[:, :1].to(self.device)
+        X_test = X_test.to(self.device)
+        y_test = y_test.to(self.device)
         y_train_ohe = self.ohe_matrix[y_train]
         with torch.set_grad_enabled(grad):
             p_yhat_last = self.model(X_train, y_train_ohe, X_test) # bs x n
