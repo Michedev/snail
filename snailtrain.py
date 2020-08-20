@@ -30,7 +30,7 @@ class ModelSaver:
 
 class SnailTrain(Snailtest):
 
-    def __init__(self, n: int, k: int, dataset: str, model, track_loss=True, track_layers=True, freq_track_layers=100,
+    def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
                  device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True, lr=10e-4,
                  trainpbar=True):
         self.model = Snail(n, k, dataset)
