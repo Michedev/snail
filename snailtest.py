@@ -1,6 +1,9 @@
+from operator import itemgetter
+
 import torch
 from ignite.contrib.handlers import ProgressBar
 from ignite.engine import Engine, Events
+from ignite.metrics import RunningAverage
 from torch.nn import CrossEntropyLoss
 
 
@@ -55,7 +58,10 @@ class Snailtest:
             return [mean_loss, std_loss, mean_acc, std_acc]
 
         if pbar:
-            ProgressBar().attach(engine)
+            RunningAverage(output_transform=itemgetter(0)).attach(engine, 'loss')
+            RunningAverage(output_transform=itemgetter(1)).attach(engine, 'accuracy')
+
+            ProgressBar().attach(engine, ['loss', 'accuracy'])
 
         self.model.eval()
         engine.run(test_dataloader, 1, testsize)

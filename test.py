@@ -16,6 +16,7 @@ def main(dataset='omniglot',
         dataloader = MiniImagenetDataLoader(batch_size, n, k, 1, device)
     snail = Snail(n, k, dataset)
     snail.load_state_dict(torch.load(snail.path, map_location=torch.device(device)))
+    print('Loaded', snail.path)
     snail = snail.to(device)
     snail = snail.eval()
     snail.requires_grad_(False)
