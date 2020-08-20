@@ -184,10 +184,11 @@ def pull_data_omniglot(force):
 
 def pull_data_miniimagenet(force):
     test_id = '1yKyKgxcnGMIAnA_6Vr2ilbpHMc9COg-v'
+    val_id = '1hSMUMj5IRpf-nQs1OwgiQLmGZCN0KDWl'
     train_id = '107FTosYIeBn5QbynR46YG91nHcJ70whs'
     if not MINIIMAGENETFOLDER.exists():
         MINIIMAGENETFOLDER.makedirs()
-    for zipfname, url in [('train.tar', train_id), ('test.tar', test_id)]:
+    for zipfname, url in [('train.tar', train_id), ('val.tar', val_id), ('test.tar', test_id)]:
         tarfile = MINIIMAGENETFOLDER / zipfname
         dstfolder = MINIIMAGENETFOLDER / zipfname.split('.')[0]
         if not dstfolder.exists() or force:
