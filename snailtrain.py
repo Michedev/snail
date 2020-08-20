@@ -9,6 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from models import Snail
 from paths import WEIGHTSFOLDER
+from snailtest import Snailtest
 
 
 class ModelSaver:
@@ -27,10 +28,12 @@ class ModelSaver:
             torch.save(self.model.state_dict(), self.savepath)
 
 
-class SnailTrain:
+class SnailTrain(Snailtest):
 
-    def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
-                 device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True, lr=10e-4, trainpbar=True):
+    def __init__(self, n: int, k: int, dataset: str, model, track_loss=True, track_layers=True, freq_track_layers=100,
+                 device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True, lr=10e-4,
+                 trainpbar=True):
+        super().__init__(model, device, n)
         assert dataset in ['omniglot', 'miniimagenet']
         self.t = n * k + 1
         self.n = n
@@ -64,9 +67,9 @@ class SnailTrain:
         @train_engine.on(Events.EPOCH_COMPLETED(every=self.track_loss_freq))
         def eval_test(engine):
             if self.track_loss:
-                self.tb_log(train_loader, self.logger, engine.state.epoch, is_train=True, eval_length=valsize)
+                self.tb_log(train_loader, engine.state.epoch, is_train=True, eval_length=valsize)
                 if test_loader is not None:
-                    self.tb_log(test_loader, self.logger, engine.state.epoch, is_train=False, eval_length=valsize)
+                    self.tb_log(test_loader, engine.state.epoch, is_train=False, eval_length=valsize)
 
         @train_engine.on(Events.EPOCH_COMPLETED)
         def save_state(engine):
@@ -86,56 +89,16 @@ class SnailTrain:
             p.attach(train_engine, ['loss'])
         train_engine.run(train_loader, max_epochs=epochs, epoch_length=trainsize)
 
-    def tb_log(self, dataloader, logger, epoch, is_train, eval_length=None):
-        eval_engine = Engine(lambda engine, batch: self.test_step(batch, also_accuracy=True, grad=False))
-        label = 'train' if is_train else 'test'
+    def tb_log(self, dataloader, epoch, is_train, eval_length=None):
+        dataname = 'Train' if is_train else 'Test'
+        mean_loss, std_loss, mean_acc, std_acc = self.test(dataloader, eval_length, dataname)
 
-        @eval_engine.on(Events.EPOCH_STARTED)
-        def init_stats(engine):
-            engine.state.sum_loss = 0.0
-            engine.state.sum_acc = 0.0
-            engine.state.steps = 0
+        self.logger.add_scalar(f'loss/epoch_{dataname}', mean_loss, epoch)
+        self.logger.add_scalar(f'loss/std_epoch_{dataname}', std_loss, epoch)
+        self.logger.add_scalar(f'accuracy/epoch_{dataname}', mean_acc, epoch)
+        self.logger.add_scalar(f'accuracy/std_epoch_{dataname}', std_acc, epoch)
 
-        @eval_engine.on(Events.ITERATION_COMPLETED)
-        def update_stats(engine):
-            loss, acc = engine.state.output
-            engine.state.sum_loss += loss
-            engine.state.sum_acc += acc
-            engine.state.steps += 1
-
-        @eval_engine.on(Events.EPOCH_COMPLETED)
-        def log_stats(engine):
-            mean_loss = engine.state.sum_loss / engine.state.steps
-            mean_acc = engine.state.sum_acc / engine.state.steps
-            if not is_train:
-                self.saver.step(mean_acc)
-            logger.add_scalar(f'epoch_loss/{label}', mean_loss, epoch)
-            logger.add_scalar(f'epoch_acc/{label}', mean_acc, epoch)
-            print(label, 'epoch loss', mean_loss.item())
-            print(label, 'epoch accuracy', mean_acc.item())
-
-        print('-' * 100)
-        print('Epoch', epoch)
-        self.model.eval()
-        eval_engine.run(dataloader, 1, eval_length)
         self.model.train()
-
-    def test_step(self, batch, also_accuracy=True, grad=True):
-        X_train, y_train = batch['train']
-        X_test, y_test = batch['test']
-        X_train = X_train.to(self.device)
-        y_train = y_train.to(self.device)
-        X_test = X_test.to(self.device)
-        y_test = y_test.to(self.device)
-        y_train_ohe = self.ohe_matrix[y_train]
-        with torch.set_grad_enabled(grad):
-            p_yhat_last = self.model(X_train, y_train_ohe, X_test) # bs x n
-            loss_value = self.loss(p_yhat_last, y_test.squeeze(1))
-        if not also_accuracy:
-            return loss_value
-        yhat_last = p_yhat_last.argmax(dim=1)
-        accuracy = (yhat_last == y_test).float().mean()
-        return loss_value, accuracy
 
     def train_step(self, batch, return_accuracy=False):
         self.opt.zero_grad()
