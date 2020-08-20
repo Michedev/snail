@@ -10,7 +10,6 @@ def main(dataset='omniglot',
          n=5, k=1, batch_size=32,
          device='cpu', n_sample=500):
     assert dataset in ['omniglot', 'miniimagenet']
-    use_cuda = 'cuda' in device
     if dataset == 'omniglot':
         dataloader = OmniglotDataLoader(batch_size, n, k, 1, device)
     else:
