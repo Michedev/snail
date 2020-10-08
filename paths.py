@@ -15,3 +15,4 @@ if not PRETRAIN.exists():
     PRETRAIN.mkdir()
 PRETRAINED_EMBEDDING_PATH = PRETRAIN / 'embedding_miniimagenet.pth'
 PRETRAINED_EMBEDDING_CLASSIFIER_PATH = PRETRAIN / 'embedding_classifier_miniimagenet.pth'
+PRETRAINED_EMBEDDING_AE_PATH = PRETRAIN / 'embedding_ae_miniimagenet.pth'
