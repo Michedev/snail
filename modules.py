@@ -79,13 +79,13 @@ class ResidualBlockImageNet(Module):
             in_conv = in_filters if i == 0 else out_filters
             block = Sequential(
                 Conv2d(in_conv, out_filters, kernel_size=3, padding=1),
-                BatchNorm2d(out_filters, affine=False),
-                LeakyReLU(0.1))
+                BatchNorm2d(out_filters),
+                ReLU())
             self.main_road.add_module(f'residual_block_{i}', block)
         self.main_road = Sequential(*self.main_road)
         self.conv1x1 = Conv2d(in_filters, out_filters, kernel_size=1)
         self.maxpool = MaxPool2d(2)
-        # self.dropout = Dropout2d(0.9)
+        self.dropout = Dropout2d(0.4)
 
     def forward(self, input):
         output = input
@@ -93,7 +93,7 @@ class ResidualBlockImageNet(Module):
         output2 = self.conv1x1(input)
         output += output2
         output = self.maxpool(output)
-        # output = self.dropout(output)
+        output = self.dropout(output)
         return output
 
 

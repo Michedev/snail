@@ -20,7 +20,7 @@ def build_embedding_network_miniimagenet():
         ResidualBlockImageNet(128, 256)
     )
     network = Sequential(residual_layers, Conv2d(256, 2048, kernel_size=1),
-                         ConstantPad2d(((0, 1, 0, 1)), 0), AvgPool2d(6), ReLU(),
+                         AvgPool2d(5), ReLU(), Dropout(.3),
                          Flatten(1), Linear(2048, 384))
     return network
 

@@ -19,9 +19,10 @@ from fire import Fire
 
 class UnsupervisedMiniImagenet(torch.utils.data.Dataset):
 
-    def __init__(self):
+    def __init__(self, noise=True):
         super().__init__()
-        self.files = TRAIN_MINIIMAGENET.walkfiles('*.jpg')
+        self.noise = noise
+        self.files = list(TRAIN_MINIIMAGENET.walkfiles('*.jpg'))
         self.preprocess_image = transforms.Compose([
             transforms.Resize([84, 84]),
             transforms.ToTensor(),
@@ -35,7 +36,10 @@ class UnsupervisedMiniImagenet(torch.utils.data.Dataset):
         path_img = self.files[index]
         img = Image.open(path_img)
         img = self.preprocess_image(img)
-        return img, img
+        noise = torch.empty_like(img)
+        noise.normal_(0.0, 0.02)
+        img_noise = img + noise
+        return img_noise, img
 
 
 class SupervisedMiniImagenet(torch.utils.data.Dataset):
@@ -75,7 +79,7 @@ class MiniImageNetAE(Module):
     def forward(self, x):
         xhat = self.decoder1(self.embedding_nn(x)).unsqueeze(-1).unsqueeze(-1)
         repeat_array = ([1] * (len(xhat.shape) - 1)) + [84, 84]
-        xhat = xhat.repeat(repeat_array)
+        xhat = xhat.repeat(repeat_array).squeeze(0)
         return self.decoder2(xhat)
 
 
