@@ -59,8 +59,8 @@ class AttentionBlock(Module):
         query = self.query_layer(input)  # bs x t x ks
         logits = query.bmm(keys.permute(0, 2, 1))  # bs x t x t
         mask = torch.ones(logits.shape[-1], logits.shape[-1], dtype=torch.bool) 
-        for i in range(logits.shape[-1]):
-            mask[i, i:] = False
+        for i in range(1, logits.shape[-1]):
+            mask[i, (i-1):] = False
         logits[:, mask] = - float('inf')
         probs = self.softmax(logits / self.sqrt_key_size)  # bs x t x t
         values = self.value_layer(input)  # bs x t x vs
