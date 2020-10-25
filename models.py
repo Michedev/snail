@@ -27,6 +27,7 @@ def build_embedding_network_miniimagenet():
 class NegLogSoftmax(Module):
 
     def __init__(self, dim=1):
+        super().__init__()
         self.log_softmax = LogSoftmax(dim)
 
     def forward(self, x):
