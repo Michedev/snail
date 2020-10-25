@@ -24,11 +24,18 @@ def build_embedding_network_miniimagenet():
                          Flatten(1), Linear(2048, 384))
     return network
 
+class NegLogSoftmax(Module):
+
+    def __init__(self, dim=1):
+        self.log_softmax = LogSoftmax(dim)
+
+    def forward(self, x):
+        return - self.log_softmax
 
 def build_snail(in_filters, n, t):
     log2_t = int(ceil(log2(t)))
     model = Sequential()
-    softmax = Softmax(dim=1)
+    softmax = NegLogSoftmax(dim=1)
     filters = in_filters + n # bs x (n + in_filters) x t
     model.add_module('attn1', AttentionBlock(filters, 64, 32))  # bs x (n + in_filters + 32) x t
     filters += 32
