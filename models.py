@@ -31,7 +31,7 @@ class NegLogSoftmax(Module):
         self.log_softmax = LogSoftmax(dim)
 
     def forward(self, x):
-        return - self.log_softmax
+        return - self.log_softmax(x)
 
 def build_snail(in_filters, n, t):
     log2_t = int(ceil(log2(t)))
