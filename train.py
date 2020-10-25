@@ -74,7 +74,7 @@ def main(dataset='omniglot', n=5, k=5, trainsize=None, testsize=None, epochs=200
     if load_weights:
         model.load_if_exists()
     test_classes = None if not eval_test else test_classes
-    model.train(epochs, batch_size, train_loader, test_loader, evalength)
+    model.train(epochs, train_loader, test_loader, evalength)
     with open('train_classes.txt', 'w') as f:
         f.write(', '.join(train_classes))
     with open('test_classes.txt', 'w') as f:

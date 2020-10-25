@@ -93,10 +93,10 @@ class SnailTrain:
         def log_stats(engine):
             losses = torch.FloatTensor(engine.state.losses)
             accs = torch.FloatTensor(engine.state.accs)
-            mean_loss = losses.mean().item()
-            mean_acc = accs.mean().item()
-            std_loss = losses.std().item()
-            std_acc = accs.std().item()
+            mean_loss = losses.mean()
+            mean_acc = accs.mean()
+            std_loss = losses.std()
+            std_acc = accs.std()
             if not is_train:
                 self.lr_plateau.step(mean_acc)
             logger.add_scalar(f'epoch_loss/mean_{label}', mean_loss, epoch)
