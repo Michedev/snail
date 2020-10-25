@@ -30,11 +30,6 @@ class SnailTrain:
         self.model = Snail(n, k, dataset)
         if self.is_miniimagenet:
             self.model.embedding_network.load_state_dict(torch.load(PRETRAINED_EMBEDDING_PATH, map_location=torch.device('cpu')))
-            self.model.embedding_network = \
-                 Sequential(self.model.embedding_network,
-                            Linear(384, 1000), BatchNorm1d(1000), 
-                            Dropout(0.8), LeakyReLU(), 
-                            Linear(1000, 384))
             print('Load pretrained embedding MiniImagenet')
         self.model = self.model.to(self.device)
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
@@ -50,29 +45,15 @@ class SnailTrain:
         self.trainpbar = trainpbar
         self.track_params_freq = track_params_freq
 
-    def train(self, epochs: int, batch_size: int, train_classes, test_classes=None, trainsize=None, testsize=None, eval_length=None):
+    def train(self, epochs: int, train_loader, test_loader=None, eval_length=None):
         self.model.train()
-        train_data = OmniglotMetaLearning(train_classes, self.n, self.k,
-                         self.random_rotation, trainsize) if self.is_omniglot else \
-            MiniImageNetMetaLearning(train_classes, self.n, self.k,
-                         self.random_rotation, trainsize)
-        train_loader = DataLoader(train_data, batch_size=batch_size,
-                                  shuffle=True, num_workers=cpu_count(),
-                                  drop_last=True)
-        if test_classes:
-            test_data = OmniglotMetaLearning(test_classes, self.n, self.k, self.random_rotation, testsize) \
-                        if self.is_omniglot else \
-                        MiniImageNetMetaLearning(test_classes, self.n, self.k, self.random_rotation, testsize)
-            test_data.shuffle()
-            test_loader = DataLoader(test_data, shuffle=True, num_workers=cpu_count(),
-                                     batch_size=batch_size, drop_last=True)
         train_engine = Engine(lambda engine, batch: self.opt_step(*batch, return_accuracy=False))
 
         @train_engine.on(Events.EPOCH_COMPLETED(every=self.track_loss_freq))
         def eval_test(engine):
             if self.track_loss:
                 self.tb_log(train_loader, self.logger, engine.state.epoch, is_train=True, eval_length=eval_length)
-                if test_classes:
+                if test_loader:
                     self.tb_log(test_loader, self.logger, engine.state.epoch, is_train=False, eval_length=eval_length)
 
         @train_engine.on(Events.EPOCH_COMPLETED)
@@ -93,31 +74,35 @@ class SnailTrain:
             p.attach(train_engine, ['loss'])
         train_engine.run(train_loader, max_epochs=epochs)
 
-    def tb_log(self, dataloader, logger, epoch, is_train, eval_length=None):
+    def tb_log(self, dataloader, logger: SummaryWriter, epoch, is_train, eval_length=None):
         eval_engine = Engine(lambda engine, batch: self.calc_loss(*batch, also_accuracy=True, grad=False))
         label = 'train' if is_train else 'test'
 
         @eval_engine.on(Events.EPOCH_STARTED)
         def init_stats(engine):
-            engine.state.sum_loss = 0.0
-            engine.state.sum_acc = 0.0
-            engine.state.steps = 0
+            engine.state.losses = []
+            engine.state.accs = []
 
         @eval_engine.on(Events.ITERATION_COMPLETED)
         def update_stats(engine):
             loss, acc = engine.state.output
-            engine.state.sum_loss += loss
-            engine.state.sum_acc += acc
-            engine.state.steps += 1
+            engine.state.losses.append(loss)
+            engine.state.accs.append(acc)
 
         @eval_engine.on(Events.EPOCH_COMPLETED)
         def log_stats(engine):
-            mean_loss = engine.state.sum_loss / engine.state.steps
-            mean_acc = engine.state.sum_acc / engine.state.steps
+            losses = torch.FloatTensor(engine.state.losses)
+            accs = torch.FloatTensor(engine.state.accs)
+            mean_loss = losses.mean().item()
+            mean_acc = accs.mean().item()
+            std_loss = losses.std().item()
+            std_acc = accs.std().item()
             if not is_train:
                 self.lr_plateau.step(mean_acc)
-            logger.add_scalar(f'epoch_loss/{label}', mean_loss, epoch)
-            logger.add_scalar(f'epoch_acc/{label}', mean_acc, epoch)
+            logger.add_scalar(f'epoch_loss/mean_{label}', mean_loss, epoch)
+            logger.add_scalar(f'epoch_acc/mean_{label}', mean_acc, epoch)
+            logger.add_scalar(f'epoch_loss/std_{label}', std_loss, epoch)
+            logger.add_scalar(f'epoch_acc/std_{label}', std_acc, epoch)
             print(label, 'epoch loss', mean_loss.item())
             print(label, 'epoch accuracy', mean_acc.item())
 
