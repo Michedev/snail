@@ -33,7 +33,7 @@ class SnailTrain:
             print('Load pretrained embedding MiniImagenet')
         self.model = self.model.to(self.device)
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.lr_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt, 'max', factor=0.1, patience=5)
+        self.exponential_decay = torch.optim.lr_scheduler.ExponentialLR(self.opt, 0.5)
         self.loss = CrossEntropyLoss(reduction='mean')
         self.track_layers = track_layers
         self.track_loss = track_loss
@@ -98,13 +98,13 @@ class SnailTrain:
             std_loss = losses.std()
             std_acc = accs.std()
             if not is_train:
-                self.lr_plateau.step(mean_acc)
+                self.exponential_decay.step()
             logger.add_scalar(f'epoch_loss/mean_{label}', mean_loss, epoch)
             logger.add_scalar(f'epoch_acc/mean_{label}', mean_acc, epoch)
             logger.add_scalar(f'epoch_loss/std_{label}', std_loss, epoch)
             logger.add_scalar(f'epoch_acc/std_{label}', std_acc, epoch)
-            print(label, 'epoch loss', mean_loss.item())
-            print(label, 'epoch accuracy', mean_acc.item())
+            print(label, 'epoch loss', mean_loss.item(), '+-', std_loss)
+            print(label, 'epoch accuracy', mean_acc.item(), '+-', std_acc)
 
         print('-' * 100)
         print('Epoch', epoch)
@@ -121,7 +121,7 @@ class SnailTrain:
         with torch.set_grad_enabled(grad):
             yhat = self.model(X, y) # bs x n x t
             p_yhat_last = yhat[:, :, -1]
-            loss_value = self.loss(p_yhat_last, y_last)
+            loss_value = self.loss(p_yhat_last, y_last) + p_yhat_last.softmax()
         if not also_accuracy:
             return loss_value
         yhat_last = p_yhat_last.argmax(dim=1)
