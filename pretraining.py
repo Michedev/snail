@@ -19,14 +19,14 @@ from fire import Fire
 
 class UnsupervisedMiniImagenet(torch.utils.data.Dataset):
 
-    def __init__(self, noise=True):
+    def __init__(self, noise=True, var_noise=0.1):
         super().__init__()
         self.noise = noise
+        self.var_noise = var_noise
         self.files = list(TRAIN_MINIIMAGENET.walkfiles('*.jpg'))
         self.preprocess_image = transforms.Compose([
             transforms.Resize([84, 84]),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
 
     def __len__(self):
@@ -36,10 +36,13 @@ class UnsupervisedMiniImagenet(torch.utils.data.Dataset):
         path_img = self.files[index]
         img = Image.open(path_img)
         img = self.preprocess_image(img)
-        noise = torch.empty_like(img)
-        noise.normal_(0.0, 0.02)
-        img_noise = img + noise
-        return img_noise, img
+        if self.noise:
+            noise = torch.empty_like(img)
+            noise.normal_(0.0, self.var_noise)
+            img_noise = img + noise
+            return img_noise, img
+        else:
+            return img, img
 
 
 class SupervisedMiniImagenet(torch.utils.data.Dataset):
@@ -83,15 +86,10 @@ class MiniImageNetAE(Module):
         return self.decoder2(xhat)
 
 
-def train_model(model, classes, device, epochs, batch_size):
+def train_model(model, train_data, test_data, device, epochs, batch_size):
     opt = torch.optim.Adam(model.parameters())
     loss = MSELoss()
     trainer = create_supervised_trainer(model, opt, loss, device=torch.device(device))
-    lr_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, 'max', factor=0.1, patience=5)
-    dataset = UnsupervisedMiniImagenet()
-    train_len = int(len(dataset) * 0.8)
-    test_len = len(dataset) - train_len
-    train_data, test_data = torch.utils.data.random_split(dataset, [train_len, test_len])
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
     RunningAverage(output_transform=lambda x: x).attach(trainer, 'loss')
@@ -119,14 +117,19 @@ def train_model(model, classes, device, epochs, batch_size):
     trainer.run(train_loader, max_epochs=epochs)
 
 
-def main(epochs, batch_size, device='cuda'):
-    train_classes = TRAIN_MINIIMAGENET.dirs()
+def main(epochs, batch_size, device='cuda', train_perc=0.8, noise=False, var_noise=0.1):
+    assert 0.1 < train_perc <= 1.0
     model = MiniImageNetAE()
     model = model.to(device)
     if PRETRAINED_EMBEDDING_AE_PATH.exists():
         model.load_state_dict(torch.load(PRETRAINED_EMBEDDING_AE_PATH, map_location=torch.device(device)))
         print('loaded embedding from', PRETRAINED_EMBEDDING_AE_PATH)
-    train_model(model, train_classes, device, epochs, batch_size)
+    dataset = UnsupervisedMiniImagenet(noise, var_noise)
+    train_len = int(len(dataset) * train_perc)
+    test_len = len(dataset) - train_len
+    train_data, test_data = torch.utils.data.random_split(dataset, [train_len, test_len])
+
+    train_model(model, train_data, test_data, device, epochs, batch_size)
 
 
 if __name__ == "__main__":
