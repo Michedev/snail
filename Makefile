@@ -30,17 +30,17 @@ pretrain-miniimagenet:
 
 
 train-miniimagenet-n5-k1:
-	python3 train.py --dataset='miniimagenet' --n=5 --k=1 --epochs=100 --batch-size=8 --trainsize=10000 --testsize=64 --device=$(DEVICETRAIN) --evalength=64 --lr=10e-4 --track-weights=True --train-weights-freq=1000 --random-rotation=False --trainpbar=False
+	python3 train.py --dataset='miniimagenet' --n=5 --k=1 --epochs=100 --batch-size=8 --trainsize=10000 --testsize=64 --device=$(DEVICETRAIN) --evalength=64 --lr=10e-4 --track-weights=True --track-weights-freq=10_000 --random-rotation=False --trainpbar=False
 
 train-miniimagenet-n5-k1-no-pretrain:
-	python3 train.py --dataset='miniimagenet' --n=5 --k=1 --epochs=100 --batch-size=8 --trainsize=10000 --testsize=64 --device=$(DEVICETRAIN) --evalength=64 --lr=10e-4 --track-weights=True --train-weights-freq=1_000_000 --random-rotation=False --trainpbar=False --use-pretraining=False --init-truncated-normal
+	python3 train.py --dataset='miniimagenet' --n=5 --k=1 --epochs=100 --batch-size=8 --trainsize=10000 --testsize=64 --device=$(DEVICETRAIN) --evalength=64 --lr=10e-4 --track-weights=True --track-weights-freq=10_000 --random-rotation=False --trainpbar=False --use-pretraining=False --init-truncated-normal
 
 train-miniimagenet-n5-k1-with-logs:
-	python3 train.py --dataset='miniimagenet' --n=5 --k=1 --epochs=100 --batch-size=8 --trainsize=10000 --testsize=64 --device=$(DEVICETRAIN) --evalength=64 --lr=10e-5 --track-weights=True --train-weights-freq=1000 --random-rotation=False --trainpbar=False > train-log.txt 2> train-err.txt
+	python3 train.py --dataset='miniimagenet' --n=5 --k=1 --epochs=100 --batch-size=8 --trainsize=10000 --testsize=64 --device=$(DEVICETRAIN) --evalength=64 --lr=10e-5 --track-weights=True --track-weights-freq=10_000 --random-rotation=False --trainpbar=False > train-log.txt 2> train-err.txt
 
 
 
 train-miniimagenet-n5-k5:
-	python3 train.py --dataset='miniimagenet' --n=5 --k=5 --epochs=100 --batch-size=8 --trainsize=10000 --testsize=64 --device='cuda:1' --evalength=64 --lr=10e-5 --track-weights=True --train-weights-freq=1000 --random-rotation=False --trainpbar=False > train-log.txt 2> train-err.txt
+	python3 train.py --dataset='miniimagenet' --n=5 --k=5 --epochs=100 --batch-size=8 --trainsize=10000 --testsize=64 --device='cuda:1' --evalength=64 --lr=10e-5 --track-weights=True --track-weights-freq=1000 --random-rotation=False --trainpbar=False > train-log.txt 2> train-err.txt
 	
 	
