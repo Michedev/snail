@@ -40,12 +40,14 @@ class SnailTrain:
         if self.is_miniimagenet and use_pretraining:
             self.model.embedding_network.load_state_dict(torch.load(PRETRAINED_EMBEDDING_PATH, map_location=torch.device('cpu')))
             if init_truncated_normal:
-                self._init_predictor_tnormal()
+                 with torch.no_grad():
+                     self._init_predictor_tnormal()
             print('Load pretrained embedding MiniImagenet')
         else:
             print('Not loaded pretrained embedding')
             if init_truncated_normal:
-                self._init_snail_tnormal()
+                with torch.no_grad():
+                    self._init_snail_tnormal()
         self.model = self.model.to(self.device)
         self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.exponential_decay = torch.optim.lr_scheduler.ExponentialLR(self.opt, 0.5)
