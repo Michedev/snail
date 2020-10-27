@@ -127,13 +127,13 @@ class SnailTrain:
             loss, acc, yhat_logit = engine.state.output
             engine.state.losses.append(loss)
             engine.state.accs.append(acc)
-            engine.state.logits.append(yhat_logit)
+            engine.state.logits.append(yhat_logit.unsqueeze(0))
 
         @eval_engine.on(Events.EPOCH_COMPLETED)
         def log_stats(engine):
             losses = torch.FloatTensor(engine.state.losses)
             accs = torch.FloatTensor(engine.state.accs)
-            logits = torch.FloatTensor(engine.state.logits)
+            logits = torch.cat(engine.state.logits, dim=0)
             mean_loss = losses.mean()
             mean_acc = accs.mean()
             std_loss = losses.std()
