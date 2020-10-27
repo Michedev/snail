@@ -25,7 +25,7 @@ class SnailTrain:
 
     def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
                  device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True, lr=10e-4, trainpbar=True,
-                 use_pretraining=True, init_truncated_normal=False):
+                 use_pretraining=True, init_truncated_normal=False, std_init=0.02):
         assert dataset in ['omniglot', 'miniimagenet']
         self.t = n * k + 1
         self.n = n
@@ -35,6 +35,7 @@ class SnailTrain:
         self.is_omniglot = dataset == 'omniglot'
         self.is_miniimagenet = dataset == 'miniimagenet'
         self.ohe_matrix = torch.eye(n)
+        self.std_init = std_init
         self.model = Snail(n, k, dataset)
         if self.is_miniimagenet and use_pretraining:
             self.model.embedding_network.load_state_dict(torch.load(PRETRAINED_EMBEDDING_PATH, map_location=torch.device('cpu')))
@@ -52,7 +53,7 @@ class SnailTrain:
         self.track_layers = track_layers
         self.track_loss = track_loss
         self.logger = SummaryWriter('tb/log_' + dataset + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")) \
-                        if self.track_layers or self.track_loss else None
+            if self.track_layers or self.track_loss else None
         self.freq_track_layers = freq_track_layers
         self.random_rotation = random_rotation
         self.track_loss_freq = track_loss_freq
@@ -64,14 +65,14 @@ class SnailTrain:
             if 'bias' in name:
                 parameters.zero_()
             elif 'weight' in name:
-                truncated_normal_(parameters, std=0.02)
+                truncated_normal_(parameters, std=self.std_init)
 
     def _init_predictor_tnormal(self):
         for name, parameters in self.model.snail.named_parameters():
             if 'bias' in name:
                 parameters.zero_()
             elif 'weight' in name:
-                truncated_normal_(parameters, std=0.02)
+                truncated_normal_(parameters, std=self.std_init)
 
 
     def train(self, epochs: int, train_loader, test_loader=None, eval_length=None):
