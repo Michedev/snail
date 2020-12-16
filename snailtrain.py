@@ -23,8 +23,9 @@ def truncated_normal_(tensor, mean=0, std: float=1):
 
 class SnailTrain:
 
+    @torch.no_grad()
     def __init__(self, n: int, k: int, dataset: str, track_loss=True, track_layers=True, freq_track_layers=100,
-                 device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True, lr=10e-4, trainpbar=True,
+                 device='cuda', track_loss_freq=3, track_params_freq=1000, random_rotation=True, lr=10e-5 * 4, trainpbar=True,
                  use_pretraining=True, init_truncated_normal=False, std_init=0.02):
         assert dataset in ['omniglot', 'miniimagenet']
         self.t = n * k + 1
@@ -40,16 +41,19 @@ class SnailTrain:
         if self.is_miniimagenet and use_pretraining:
             self.model.embedding_network.load_state_dict(torch.load(PRETRAINED_EMBEDDING_PATH, map_location=torch.device('cpu')))
             if init_truncated_normal:
-                 with torch.no_grad():
-                     self._init_predictor_tnormal()
+                 self._init_predictor_tnormal()
             print('Load pretrained embedding MiniImagenet')
         else:
-            print('Not loaded pretrained embedding')
+            print('Init snail using truncated normal with variance', std_init)
             if init_truncated_normal:
                 with torch.no_grad():
                     self._init_snail_tnormal()
         self.model = self.model.to(self.device)
-        self.opt = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.warmup_steps = 10_000
+        self.lr_orig = lr
+        self.gamma_warmup = (self.lr_orig / 1e-9) ** (1 / self.warmup_steps)
+        self.lr = 1e-9
+        self.opt = torch.optim.Adam(self.model.parameters(), lr=self.lr)
         self.exponential_decay = torch.optim.lr_scheduler.ExponentialLR(self.opt, 0.5)
         self.loss = CrossEntropyLoss(reduction='mean')
         self.track_layers = track_layers
@@ -81,12 +85,23 @@ class SnailTrain:
         self.model.train()
         train_engine = Engine(lambda engine, batch: self.opt_step(*batch, return_accuracy=False))
 
+        @train_engine.on(Events.ITERATION_COMPLETED(lambda e, it: it < self.warmup_steps))
+        def warmup(engine):
+            self.lr *= self.gamma_warmup
+            self.lr = min(self.lr, self.lr_orig)
+            for param_group in self.opt.param_groups:
+                param_group['lr'] = self.lr
+
         @train_engine.on(Events.EPOCH_COMPLETED(every=self.track_loss_freq))
         def eval_test(engine):
             if self.track_loss:
                 self.tb_log(train_loader, self.logger, engine.state.epoch, is_train=True, eval_length=eval_length)
                 if test_loader:
                     self.tb_log(test_loader, self.logger, engine.state.epoch, is_train=False, eval_length=eval_length)
+
+        @train_engine.on(Events.ITERATION_COMPLETED(every=100_000))
+        def exp_decay(engine):
+            self.exponential_decay.step()
 
         @train_engine.on(Events.EPOCH_COMPLETED)
         def save_state(engine):

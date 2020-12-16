@@ -58,13 +58,13 @@ class AttentionBlock(Module):
         keys = self.key_layer(input)  # bs x t x ks
         query = self.query_layer(input)  # bs x t x ks
         logits = query.bmm(keys.permute(0, 2, 1))  # bs x t x t
-        mask = torch.ones(logits.shape[-1], logits.shape[-1], dtype=torch.bool) 
-        for i in range(1, logits.shape[-1]):
-            mask[i, (i-1):] = False
+        mask = torch.zeros(logits.shape[-1], logits.shape[-1], dtype=torch.bool)
+        for i in range(logits.shape[-1]-1):
+            mask[i, (i+1):] = True
         logits[:, mask] = - float('inf')
         probs = self.softmax(logits / self.sqrt_key_size)  # bs x t x t
         values = self.value_layer(input)  # bs x t x vs
-        read = probs.matmul(values)  # bs x t vs
+        read = probs.matmul(values)  # bs x t x vs
         output = torch.cat([input, read], dim=-1)  # bs x t x (channels + vs)
         output = output.permute(0, 2, 1)  # bs x (channels + vs) x t
         return output
@@ -85,7 +85,7 @@ class ResidualBlockImageNet(Module):
         self.main_road = Sequential(*self.main_road)
         self.conv1x1 = Conv2d(in_filters, out_filters, kernel_size=1)
         self.maxpool = MaxPool2d(2)
-        self.dropout = Dropout2d(0.4)
+        self.dropout = Dropout2d(0.9)
 
     def forward(self, input):
         output = input
